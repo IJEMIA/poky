@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memoria — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+<style>
+  #board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 440px; margin: 0 auto; }
+  .card3d { aspect-ratio: 3 / 4; perspective: 600px; cursor: pointer; }
+  .card3d .inner { position: relative; width: 100%; height: 100%; transition: transform .45s ease; transform-style: preserve-3d; }
+  .card3d.flipped .inner, .card3d.matched .inner { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 10px; backface-visibility: hidden; font-weight: 800; }
+  .face.front { background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff; font-size: 1.6rem; box-shadow: 0 3px 0 rgba(0,0,0,.2); }
+  .face.back { background: #fef3c7; color: #9d174d; font-size: 2rem; transform: rotateY(180deg); border: 2px solid #f59e0b; }
+  .card3d.matched .face.back { background: #dcfce7; border-color: #22c55e; color: #166534; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Memoria</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Pares: <span id="pairs">0</span>/8</div>
+      <div class="best">Movimientos: <span id="moves">0</span></div>
+      <button class="btn" id="restart">Reiniciar</button>
+    </div>
+    <div id="board"></div>
+    <p class="hint">Toca dos cartas para encontrar su pareja</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Hay 16 cartas boca abajo con 8 pares de símbolos. Voltea dos cartas por turno: si son iguales, quedan boca arriba; si no, se vuelven a voltear. Encuentra los 8 pares en la menor cantidad de movimientos posible.</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var boardEl = document.getElementById("board");
+  var pairsEl = document.getElementById("pairs");
+  var movesEl = document.getElementById("moves");
+  var msgEl = document.getElementById("message");
+  var SYMBOLS = ["★", "♥", "♦", "♣", "▲", "●", "■", "◆"];
+  var first = null, lock = false, pairs = 0, moves = 0;
+
+  function shuffle(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  function reset() {
+    var deck = shuffle(SYMBOLS.concat(SYMBOLS));
+    boardEl.innerHTML = "";
+    first = null; lock = false; pairs = 0; moves = 0;
+    pairsEl.textContent = "0"; movesEl.textContent = "0";
+    msgEl.className = "message"; msgEl.textContent = "";
+    deck.forEach(function (sym) {
+      var card = document.createElement("div");
+      card.className = "card3d";
+      card.setAttribute("data-sym", sym);
+      card.innerHTML = '<div class="inner"><div class="face front">?</div><div class="face back">' + sym + "</div></div>";
+      card.addEventListener("click", function () { flip(card); });
+      boardEl.appendChild(card);
+    });
+  }
+
+  function flip(card) {
+    if (lock || card.classList.contains("flipped") || card.classList.contains("matched")) return;
+    card.classList.add("flipped");
+    if (!first) { first = card; return; }
+    moves++;
+    movesEl.textContent = moves;
+    if (first.getAttribute("data-sym") === card.getAttribute("data-sym")) {
+      first.classList.add("matched");
+      card.classList.add("matched");
+      first = null;
+      pairs++;
+      pairsEl.textContent = pairs;
+      if (pairs === 8) {
+        msgEl.textContent = "¡Felicidades! Encontraste los 8 pares en " + moves + " movimientos.";
+        msgEl.className = "message show win";
+      }
+    } else {
+      lock = true;
+      var a = first, b = card;
+      first = null;
+      setTimeout(function () { a.classList.remove("flipped"); b.classList.remove("flipped"); lock = false; }, 800);
+    }
+  }
+
+  document.getElementById("restart").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corredor Infinito — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Corredor Infinito</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Distancia: <span id="score">0</span> m</div>
+      <div class="best">Récord: <span id="best">0</span> m</div>
+      <button class="btn" id="restart">Reiniciar</button>
+    </div>
+    <canvas id="game" width="600" height="260"></canvas>
+    <p class="hint">Espacio, clic o toque para saltar · Salta dos veces seguidas para doble salto</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Tu corredor avanza solo y cada vez más rápido. Salta los bloques y las piedras con la barra espaciadora, un clic o un toque. Puedes saltar dos veces en el aire para un doble salto. Cada metro recorrido suma puntos: ¿hasta dónde llegas?</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  var scoreEl = document.getElementById("score");
+  var bestEl = document.getElementById("best");
+  var msgEl = document.getElementById("message");
+  var W = 600, H = 260, GROUND_Y = 210;
+  var player, obstacles, distance, speed, frame, state, best = 0, raf = null, jumps = 0;
+
+  try { best = parseInt(localStorage.getItem("chispa-corredor-best") || "0", 10) || 0; } catch (e) {}
+  bestEl.textContent = best;
+
+  function reset() {
+    player = { x: 70, y: GROUND_Y - 44, w: 32, h: 44, vy: 0 };
+    obstacles = [];
+    distance = 0; speed = 4.2; frame = 0; state = "ready"; jumps = 0;
+    scoreEl.textContent = "0";
+    msgEl.className = "message"; msgEl.textContent = "";
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function jump() {
+    if (state === "ready") { state = "playing"; return; }
+    if (state === "over") { reset(); return; }
+    if (jumps < 2) { player.vy = -12.5; jumps++; }
+  }
+
+  function update() {
+    frame++;
+    if (state !== "playing") return;
+    distance += speed * 0.06;
+    speed = 4.2 + Math.min(distance * 0.012, 6);
+    player.vy += 0.7;
+    player.y += player.vy;
+    if (player.y >= GROUND_Y - player.h) { player.y = GROUND_Y - player.h; player.vy = 0; jumps = 0; }
+    if (frame % Math.max(55, 110 - Math.floor(distance / 20)) === 0) {
+      var tall = Math.random() < 0.35;
+      obstacles.push({ x: W, w: 22 + Math.random() * 14, h: tall ? 58 : 34 });
+    }
+    obstacles.forEach(function (o) { o.x -= speed; });
+    obstacles = obstacles.filter(function (o) { return o.x + o.w > 0; });
+    var hit = obstacles.some(function (o) {
+      return player.x + player.w - 6 > o.x && player.x + 6 < o.x + o.w &&
+        player.y + player.h - 4 > GROUND_Y - o.h;
+    });
+    var m = Math.floor(distance);
+    scoreEl.textContent = m;
+    if (m > best) { best = m; bestEl.textContent = best; try { localStorage.setItem("chispa-corredor-best", String(best)); } catch (e) {} }
+    if (hit) {
+      state = "over";
+      msgEl.textContent = "¡Te estrellaste! Recorriste " + m + " metros. Toca la pantalla o pulsa Reiniciar para correr de nuevo.";
+      msgEl.className = "message show lose";
+    }
+  }
+
+  function draw() {
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#fde68a"); g.addColorStop(1, "#f59e0b");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#fff7ed";
+    ctx.beginPath(); ctx.arc(500, 45, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.7)";
+    ctx.fillRect(90, 40, 90, 16); ctx.fillRect(110, 52, 60, 12);
+    ctx.fillStyle = "#78350f"; ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+    ctx.fillStyle = "#92400e"; ctx.fillRect(0, GROUND_Y, W, 5);
+    obstacles.forEach(function (o) {
+      ctx.fillStyle = "#44403c";
+      ctx.fillRect(o.x, GROUND_Y - o.h, o.w, o.h);
+      ctx.fillStyle = "#78716c";
+      ctx.fillRect(o.x + 3, GROUND_Y - o.h + 4, o.w - 6, 6);
+    });
+    var leg = state === "playing" && player.y >= GROUND_Y - player.h ? Math.sin(frame * 0.5) * 8 : 0;
+    ctx.fillStyle = "#dc2626";
+    ctx.fillRect(player.x, player.y, player.w, player.h - 12);
+    ctx.fillStyle = "#fca5a5";
+    ctx.beginPath(); ctx.arc(player.x + 16, player.y - 6, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#111827";
+    ctx.beginPath(); ctx.arc(player.x + 21, player.y - 8, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#7f1d1d";
+    ctx.fillRect(player.x + 4, player.y + player.h - 12 + leg, 8, 12);
+    ctx.fillRect(player.x + 20, player.y + player.h - 12 - leg, 8, 12);
+    if (state === "ready") {
+      ctx.fillStyle = "rgba(15,23,42,.7)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 24px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("Corredor Infinito", W / 2, H / 2 - 10);
+      ctx.font = "15px sans-serif";
+      ctx.fillText("Espacio, clic o toque para saltar", W / 2, H / 2 + 18);
+    }
+  }
+
+  function loop() { update(); draw(); raf = requestAnimationFrame(loop); }
+
+  canvas.addEventListener("pointerdown", function (e) { jump(); e.preventDefault(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space" || e.key === "ArrowUp") { jump(); e.preventDefault(); }
+  });
+  document.getElementById("restart").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>

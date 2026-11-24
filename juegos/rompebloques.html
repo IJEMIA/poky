@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rompebloques — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Rompebloques</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Puntos: <span id="score">0</span></div>
+      <div class="best">Vidas: <span id="lives">3</span> · Nivel: <span id="level">1</span></div>
+      <button class="btn" id="restart">Reiniciar</button>
+    </div>
+    <canvas id="game" width="480" height="520"></canvas>
+    <p class="hint">Mueve el mouse, desliza el dedo o usa ← → para mover la paleta</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Mueve la paleta para que la pelota no caiga al suelo y rompa todos los bloques. Cada bloque vale 10 puntos; al limpiarlos todos subes de nivel y la pelota va más rápido. Tienes 3 vidas. En el celular, arrastra el dedo sobre la pantalla.</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  var scoreEl = document.getElementById("score");
+  var livesEl = document.getElementById("lives");
+  var levelEl = document.getElementById("level");
+  var msgEl = document.getElementById("message");
+  var W = 480, H = 520;
+  var paddle, ball, bricks, score, lives, level, state, raf = null;
+  var ROW_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4"];
+  var keys = {};
+
+  function buildBricks() {
+    bricks = [];
+    for (var r = 0; r < 5; r++) for (var c = 0; c < 8; c++) {
+      bricks.push({ x: 14 + c * 57, y: 50 + r * 28, w: 50, h: 20, color: ROW_COLORS[r], alive: true });
+    }
+  }
+
+  function resetBall() {
+    ball = { x: W / 2, y: H - 60, r: 8, dx: 3.4, dy: -3.4 };
+  }
+
+  function reset() {
+    paddle = { x: W / 2 - 45, y: H - 26, w: 90, h: 12 };
+    score = 0; lives = 3; level = 1; state = "ready";
+    scoreEl.textContent = "0"; livesEl.textContent = "3"; levelEl.textContent = "1";
+    msgEl.className = "message"; msgEl.textContent = "";
+    buildBricks();
+    resetBall();
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function start() { if (state === "ready") state = "playing"; }
+
+  function update() {
+    if (state !== "playing") return;
+    var speed = 5 + level * 0.6;
+    if (keys.ArrowLeft || keys.a) paddle.x -= 7;
+    if (keys.ArrowRight || keys.d) paddle.x += 7;
+    paddle.x = Math.max(0, Math.min(W - paddle.w, paddle.x));
+    ball.x += ball.dx; ball.y += ball.dy;
+    var mag = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy) || 1;
+    ball.dx = ball.dx / mag * speed; ball.dy = ball.dy / mag * speed;
+    if (ball.x - ball.r < 0 || ball.x + ball.r > W) ball.dx *= -1;
+    if (ball.y - ball.r < 0) ball.dy *= -1;
+    if (ball.y + ball.r >= paddle.y && ball.y + ball.r <= paddle.y + paddle.h + 12 &&
+        ball.x >= paddle.x && ball.x <= paddle.x + paddle.w && ball.dy > 0) {
+      var rel = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+      var angle = rel * Math.PI / 3;
+      ball.dx = speed * Math.sin(angle);
+      ball.dy = -speed * Math.cos(angle);
+      ball.y = paddle.y - ball.r;
+    }
+    bricks.forEach(function (b) {
+      if (!b.alive) return;
+      if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + b.w &&
+          ball.y + ball.r > b.y && ball.y - ball.r < b.y + b.h) {
+        b.alive = false;
+        score += 10;
+        scoreEl.textContent = score;
+        ball.dy *= -1;
+      }
+    });
+    if (bricks.every(function (b) { return !b.alive; })) {
+      level++;
+      levelEl.textContent = level;
+      buildBricks();
+      resetBall();
+      state = "ready";
+      msgEl.textContent = "¡Nivel " + level + "! Toca la pantalla para lanzar la pelota.";
+      msgEl.className = "message show info";
+      return;
+    }
+    if (ball.y - ball.r > H) {
+      lives--;
+      livesEl.textContent = lives;
+      if (lives <= 0) {
+        state = "over";
+        msgEl.textContent = "Fin del juego: te quedaste sin vidas. Hiciste " + score + " puntos.";
+        msgEl.className = "message show lose";
+      } else {
+        resetBall();
+        state = "ready";
+        msgEl.textContent = "Perdiste una vida. Toca la pantalla para lanzar de nuevo.";
+        msgEl.className = "message show info";
+      }
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle = "#0f172a"; ctx.fillRect(0, 0, W, H);
+    bricks.forEach(function (b) {
+      if (!b.alive) return;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = "rgba(255,255,255,.25)";
+      ctx.fillRect(b.x, b.y, b.w, 5);
+    });
+    ctx.fillStyle = "#38bdf8";
+    ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+    if (state === "ready" && lives === 3 && level === 1 && score === 0) {
+      ctx.fillStyle = "rgba(15,23,42,.7)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 24px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("Rompebloques", W / 2, H / 2 - 10);
+      ctx.font = "15px sans-serif";
+      ctx.fillText("Toca la pantalla para lanzar la pelota", W / 2, H / 2 + 18);
+    }
+  }
+
+  function loop() { update(); draw(); raf = requestAnimationFrame(loop); }
+
+  function pointerX(e) {
+    var r = canvas.getBoundingClientRect();
+    return (e.clientX - r.left) * (W / r.width);
+  }
+  canvas.addEventListener("pointermove", function (e) {
+    paddle.x = Math.max(0, Math.min(W - paddle.w, pointerX(e) - paddle.w / 2));
+    start();
+  });
+  canvas.addEventListener("pointerdown", function (e) {
+    paddle.x = Math.max(0, Math.min(W - paddle.w, pointerX(e) - paddle.w / 2));
+    start();
+    e.preventDefault();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "a" || e.key === "d") {
+      keys[e.key] = true; start(); e.preventDefault();
+    }
+  });
+  document.addEventListener("keyup", function (e) { keys[e.key] = false; });
+  document.getElementById("restart").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>

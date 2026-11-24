@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buscaminas — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+<style>
+  #board { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; max-width: 420px; margin: 0 auto; background: #9ca3af; padding: 4px; border-radius: 8px; }
+  .cell { aspect-ratio: 1; background: #d1d5db; border: none; font-weight: 800; font-size: 1rem; cursor: pointer; padding: 0; color: #111827; border-radius: 2px; }
+  .cell:hover { background: #e5e7eb; }
+  .cell.open { background: #f3f4f6; cursor: default; }
+  .cell.flag { color: #dc2626; }
+  .cell.mine { background: #fecaca; }
+  .n1 { color: #2563eb; } .n2 { color: #16a34a; } .n3 { color: #dc2626; }
+  .n4 { color: #7c3aed; } .n5 { color: #b45309; } .n6 { color: #0891b2; }
+  .n7 { color: #111827; } .n8 { color: #6b7280; }
+  .mode-row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+  .mode-btn { border: 2px solid #d1d5db; background: #fff; border-radius: 999px; padding: 6px 14px; font-weight: 700; cursor: pointer; }
+  .mode-btn.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Buscaminas</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Minas: <span id="mines">10</span></div>
+      <div class="best">Tiempo: <span id="time">0</span> s</div>
+      <button class="btn" id="restart">Reiniciar</button>
+    </div>
+    <div id="board"></div>
+    <div class="mode-row">
+      <button class="mode-btn active" id="mode-reveal">Revelar</button>
+      <button class="mode-btn" id="mode-flag">Poner bandera</button>
+    </div>
+    <p class="hint">Clic para revelar · Clic derecho para poner bandera · En el celular usa el modo «Poner bandera»</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Hay 10 minas escondidas en un tablero de 9×9. Revela casillas sin tocar ninguna mina: los números indican cuántas minas hay alrededor de esa casilla. Marca con banderas las casillas que creas que tienen mina. Ganas cuando revelas todas las casillas seguras. El primer clic nunca es una mina.</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var SIZE = 9, MINES = 10;
+  var boardEl = document.getElementById("board");
+  var minesEl = document.getElementById("mines");
+  var timeEl = document.getElementById("time");
+  var msgEl = document.getElementById("message");
+  var grid, revealed, flags, started, over, seconds, timer = null, mode = "reveal";
+
+  function reset() {
+    grid = []; revealed = 0; flags = 0; started = false; over = false; seconds = 0;
+    minesEl.textContent = MINES;
+    timeEl.textContent = "0";
+    msgEl.className = "message"; msgEl.textContent = "";
+    clearInterval(timer);
+    boardEl.innerHTML = "";
+    for (var r = 0; r < SIZE; r++) {
+      grid.push([]);
+      for (var c = 0; c < SIZE; c++) {
+        grid[r].push({ mine: false, count: 0, open: false, flag: false });
+        var btn = document.createElement("button");
+        btn.className = "cell";
+        btn.setAttribute("data-r", r);
+        btn.setAttribute("data-c", c);
+        btn.setAttribute("aria-label", "Casilla fila " + (r + 1) + " columna " + (c + 1));
+        btn.addEventListener("click", function () { onCell(+this.getAttribute("data-r"), +this.getAttribute("data-c")); });
+        btn.addEventListener("contextmenu", function (e) {
+          e.preventDefault();
+          toggleFlag(+this.getAttribute("data-r"), +this.getAttribute("data-c"));
+        });
+        boardEl.appendChild(btn);
+      }
+    }
+  }
+
+  function placeMines(safeR, safeC) {
+    var placed = 0;
+    while (placed < MINES) {
+      var r = Math.floor(Math.random() * SIZE), c = Math.floor(Math.random() * SIZE);
+      if (grid[r][c].mine || (Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1)) continue;
+      grid[r][c].mine = true;
+      placed++;
+    }
+    for (var r2 = 0; r2 < SIZE; r2++) for (var c2 = 0; c2 < SIZE; c2++) {
+      if (grid[r2][c2].mine) continue;
+      var n = 0;
+      neighbors(r2, c2).forEach(function (p) { if (grid[p[0]][p[1]].mine) n++; });
+      grid[r2][c2].count = n;
+    }
+  }
+
+  function neighbors(r, c) {
+    var out = [];
+    for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      var nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE) out.push([nr, nc]);
+    }
+    return out;
+  }
+
+  function cellEl(r, c) { return boardEl.children[r * SIZE + c]; }
+
+  function startTimer() {
+    timer = setInterval(function () { seconds++; timeEl.textContent = seconds; }, 1000);
+  }
+
+  function onCell(r, c) {
+    if (over) return;
+    var cell = grid[r][c];
+    if (cell.open) return;
+    if (mode === "flag") { toggleFlag(r, c); return; }
+    if (cell.flag) return;
+    if (!started) { started = true; placeMines(r, c); startTimer(); }
+    reveal(r, c);
+  }
+
+  function reveal(r, c) {
+    var cell = grid[r][c];
+    if (cell.open || cell.flag) return;
+    cell.open = true;
+    revealed++;
+    var el = cellEl(r, c);
+    el.classList.add("open");
+    if (cell.mine) {
+      el.classList.add("mine");
+      el.textContent = "●";
+      return gameOver(false);
+    }
+    if (cell.count > 0) { el.textContent = cell.count; el.classList.add("n" + cell.count); }
+    else neighbors(r, c).forEach(function (p) { reveal(p[0], p[1]); });
+    if (revealed === SIZE * SIZE - MINES) gameOver(true);
+  }
+
+  function toggleFlag(r, c) {
+    if (over) return;
+    var cell = grid[r][c];
+    if (cell.open) return;
+    cell.flag = !cell.flag;
+    flags += cell.flag ? 1 : -1;
+    var el = cellEl(r, c);
+    el.textContent = cell.flag ? "⚑" : "";
+    el.classList.toggle("flag", cell.flag);
+    minesEl.textContent = MINES - flags;
+  }
+
+  function gameOver(win) {
+    over = true;
+    clearInterval(timer);
+    for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
+      if (grid[r][c].mine) {
+        var el = cellEl(r, c);
+        el.textContent = "●";
+        el.classList.add("mine");
+      }
+    }
+    if (win) {
+      msgEl.textContent = "¡Ganaste! Despejaste el campo en " + seconds + " segundos.";
+      msgEl.className = "message show win";
+    } else {
+      msgEl.textContent = "¡Boom! Tocaste una mina. Pulsa Reiniciar para intentarlo de nuevo.";
+      msgEl.className = "message show lose";
+    }
+  }
+
+  document.getElementById("mode-reveal").addEventListener("click", function () {
+    mode = "reveal";
+    this.classList.add("active");
+    document.getElementById("mode-flag").classList.remove("active");
+  });
+  document.getElementById("mode-flag").addEventListener("click", function () {
+    mode = "flag";
+    this.classList.add("active");
+    document.getElementById("mode-reveal").classList.remove("active");
+  });
+  document.getElementById("restart").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>

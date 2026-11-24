@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simon Dice — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+<style>
+  #pads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 380px; margin: 0 auto; }
+  .pad { aspect-ratio: 1; border: none; border-radius: 18px; cursor: pointer; opacity: .55; transition: opacity .12s ease, transform .12s ease; font-size: 1.1rem; font-weight: 800; color: rgba(255,255,255,.9); }
+  .pad.lit { opacity: 1; transform: scale(1.04); box-shadow: 0 0 24px rgba(255,255,255,.5); }
+  .pad:disabled { cursor: default; }
+  #pad-0 { background: #22c55e; } #pad-1 { background: #ef4444; }
+  #pad-2 { background: #eab308; } #pad-3 { background: #3b82f6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Simon Dice</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Ronda: <span id="round">0</span></div>
+      <div class="best">Récord: <span id="best">0</span></div>
+      <button class="btn green" id="start">Empezar</button>
+      <button class="btn secondary" id="restart">Reiniciar</button>
+    </div>
+    <div id="pads">
+      <button class="pad" id="pad-0" aria-label="Verde">Verde</button>
+      <button class="pad" id="pad-1" aria-label="Rojo">Rojo</button>
+      <button class="pad" id="pad-2" aria-label="Amarillo">Amarillo</button>
+      <button class="pad" id="pad-3" aria-label="Azul">Azul</button>
+    </div>
+    <p class="hint">Escucha la secuencia y repítela en el mismo orden</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Pulsa «Empezar»: Simon enciende un color con su sonido. Repite la secuencia tocando los colores en el mismo orden. Cada ronda agrega un color más y la secuencia se reproduce un poco más rápido. Si te equivocas, el juego termina. Tu mejor ronda se guarda en este navegador.</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var pads = [0, 1, 2, 3].map(function (i) { return document.getElementById("pad-" + i); });
+  var roundEl = document.getElementById("round");
+  var bestEl = document.getElementById("best");
+  var msgEl = document.getElementById("message");
+  var startBtn = document.getElementById("start");
+  var FREQS = [415, 310, 252, 209];
+  var sequence = [], userIndex = 0, playing = false, accepting = false, best = 0;
+  var audioCtx = null;
+
+  try { best = parseInt(localStorage.getItem("chispa-simon-best") || "0", 10) || 0; } catch (e) {}
+  bestEl.textContent = best;
+
+  function ctx() {
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function tone(i, dur) {
+    var ac = ctx();
+    if (!ac) return;
+    var osc = ac.createOscillator();
+    var gain = ac.createGain();
+    osc.type = "sine";
+    osc.frequency.value = FREQS[i];
+    gain.gain.setValueAtTime(0.25, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    osc.stop(ac.currentTime + dur);
+  }
+
+  function light(i, dur) {
+    pads[i].classList.add("lit");
+    tone(i, dur);
+    setTimeout(function () { pads[i].classList.remove("lit"); }, dur * 1000);
+  }
+
+  function playSequence() {
+    accepting = false;
+    setPads(false);
+    var speed = Math.max(0.32, 0.6 - sequence.length * 0.02);
+    sequence.forEach(function (color, k) {
+      setTimeout(function () { light(color, speed); }, 500 + k * (speed * 1000 + 220));
+    });
+    setTimeout(function () {
+      accepting = true;
+      setPads(true);
+      userIndex = 0;
+    }, 500 + sequence.length * (speed * 1000 + 220));
+  }
+
+  function setPads(enabled) { pads.forEach(function (p) { p.disabled = !enabled; }); }
+
+  function nextRound() {
+    sequence.push(Math.floor(Math.random() * 4));
+    roundEl.textContent = sequence.length;
+    if (sequence.length > best) {
+      best = sequence.length;
+      bestEl.textContent = best;
+      try { localStorage.setItem("chispa-simon-best", String(best)); } catch (e) {}
+    }
+    playSequence();
+  }
+
+  function start() {
+    sequence = [];
+    playing = true;
+    startBtn.disabled = true;
+    msgEl.className = "message"; msgEl.textContent = "";
+    ctx();
+    setTimeout(nextRound, 400);
+  }
+
+  function gameOver() {
+    playing = false;
+    accepting = false;
+    setPads(false);
+    startBtn.disabled = false;
+    msgEl.textContent = "Te equivocaste. Llegaste a la ronda " + sequence.length + ". Pulsa Empezar para intentarlo de nuevo.";
+    msgEl.className = "message show lose";
+    if (audioCtx) {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = "sawtooth"; osc.frequency.value = 110;
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+    }
+  }
+
+  pads.forEach(function (pad, i) {
+    pad.addEventListener("click", function () {
+      if (!accepting || !playing) return;
+      light(i, 0.25);
+      if (sequence[userIndex] === i) {
+        userIndex++;
+        if (userIndex === sequence.length) {
+          accepting = false;
+          setPads(false);
+          msgEl.textContent = "¡Bien! Siguiente ronda…";
+          msgEl.className = "message show win";
+          setTimeout(function () { msgEl.className = "message"; msgEl.textContent = ""; nextRound(); }, 800);
+        }
+      } else {
+        gameOver();
+      }
+    });
+  });
+
+  startBtn.addEventListener("click", start);
+  document.getElementById("restart").addEventListener("click", function () {
+    sequence = []; userIndex = 0; playing = false; accepting = false;
+    roundEl.textContent = "0";
+    startBtn.disabled = false;
+    setPads(false);
+    msgEl.className = "message"; msgEl.textContent = "";
+  });
+  setPads(false);
+})();
+</script>
+</body>
+</html>

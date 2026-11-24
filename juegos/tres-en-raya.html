@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tres en Raya — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+<style>
+  #board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 360px; margin: 0 auto; }
+  .cell { aspect-ratio: 1; font-size: 3rem; font-weight: 800; background: #fff; border: 3px solid #e5e7eb; border-radius: 12px; cursor: pointer; color: #111827; }
+  .cell:hover:not(:disabled) { border-color: #7c3aed; background: #f5f3ff; }
+  .cell.x { color: #dc2626; }
+  .cell.o { color: #2563eb; }
+  .cell:disabled { cursor: default; }
+  .cell.win-cell { background: #dcfce7; border-color: #22c55e; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Tres en Raya</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Tú (X): <span id="score-x">0</span></div>
+      <div class="best">Empates: <span id="score-d">0</span> · PC (O): <span id="score-o">0</span></div>
+      <button class="btn" id="restart">Reiniciar</button>
+    </div>
+    <div id="board"></div>
+    <p class="hint">Tú juegas con X. La computadora juega con O.</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Toca una casilla vacía para poner tu X. La computadora responde con O. Gana quien logre tres en línea: horizontal, vertical o diagonal. Si el tablero se llena sin ganador, es empate.</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var boardEl = document.getElementById("board");
+  var msgEl = document.getElementById("message");
+  var sxEl = document.getElementById("score-x");
+  var sdEl = document.getElementById("score-d");
+  var soEl = document.getElementById("score-o");
+  var board, turn, over;
+  var scores = { X: 0, D: 0, O: 0 };
+  var LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+
+  function reset() {
+    board = ["", "", "", "", "", "", "", "", ""];
+    turn = "X"; over = false;
+    msgEl.className = "message"; msgEl.textContent = "";
+    boardEl.innerHTML = "";
+    for (var i = 0; i < 9; i++) {
+      var btn = document.createElement("button");
+      btn.className = "cell";
+      btn.setAttribute("data-i", i);
+      btn.setAttribute("aria-label", "Casilla " + (i + 1));
+      btn.addEventListener("click", function () { playerMove(+this.getAttribute("data-i")); });
+      boardEl.appendChild(btn);
+    }
+  }
+
+  function winner(b) {
+    for (var i = 0; i < LINES.length; i++) {
+      var l = LINES[i];
+      if (b[l[0]] && b[l[0]] === b[l[1]] && b[l[1]] === b[l[2]]) return { who: b[l[0]], line: l };
+    }
+    return null;
+  }
+
+  function render() {
+    for (var i = 0; i < 9; i++) {
+      var btn = boardEl.children[i];
+      btn.textContent = board[i];
+      btn.classList.toggle("x", board[i] === "X");
+      btn.classList.toggle("o", board[i] === "O");
+      btn.disabled = over || board[i] !== "";
+    }
+  }
+
+  function endGame(w) {
+    over = true;
+    if (w) {
+      w.line.forEach(function (i) { boardEl.children[i].classList.add("win-cell"); });
+      if (w.who === "X") { scores.X++; msgEl.textContent = "¡Ganaste! Tres en línea."; msgEl.className = "message show win"; }
+      else { scores.O++; msgEl.textContent = "Ganó la computadora. Inténtalo de nuevo."; msgEl.className = "message show lose"; }
+    } else {
+      scores.D++;
+      msgEl.textContent = "Empate. Nadie logró tres en línea.";
+      msgEl.className = "message show info";
+    }
+    sxEl.textContent = scores.X; sdEl.textContent = scores.D; soEl.textContent = scores.O;
+    render();
+  }
+
+  function playerMove(i) {
+    if (over || turn !== "X" || board[i]) return;
+    board[i] = "X";
+    render();
+    var w = winner(board);
+    if (w) return endGame(w);
+    if (board.indexOf("") === -1) return endGame(null);
+    turn = "O";
+    setTimeout(computerMove, 450);
+  }
+
+  function computerMove() {
+    if (over) return;
+    var move = findWinning("O") ?? findWinning("X") ?? bestMove();
+    board[move] = "O";
+    render();
+    var w = winner(board);
+    if (w) return endGame(w);
+    if (board.indexOf("") === -1) return endGame(null);
+    turn = "X";
+  }
+
+  function findWinning(who) {
+    for (var i = 0; i < 9; i++) {
+      if (board[i]) continue;
+      board[i] = who;
+      var win = !!winner(board);
+      board[i] = "";
+      if (win) return i;
+    }
+    return null;
+  }
+
+  function bestMove() {
+    var empty = [];
+    for (var i = 0; i < 9; i++) if (!board[i]) empty.push(i);
+    if (empty.indexOf(4) !== -1) return 4;
+    var corners = empty.filter(function (i) { return i === 0 || i === 2 || i === 6 || i === 8; });
+    if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  document.getElementById("restart").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>

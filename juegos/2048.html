@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2048 — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+<style>
+  #board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: #bbada0; padding: 8px; border-radius: 12px; max-width: 420px; margin: 0 auto; }
+  .tile { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.5rem; border-radius: 8px; background: #cdc1b4; color: #776e65; }
+  .tile.v2 { background: #eee4da; } .tile.v4 { background: #ede0c8; }
+  .tile.v8 { background: #f2b179; color: #fff; } .tile.v16 { background: #f59563; color: #fff; }
+  .tile.v32 { background: #f67c5f; color: #fff; } .tile.v64 { background: #f65e3b; color: #fff; }
+  .tile.v128 { background: #edcf72; color: #fff; font-size: 1.25rem; } .tile.v256 { background: #edcc61; color: #fff; font-size: 1.25rem; }
+  .tile.v512 { background: #edc850; color: #fff; font-size: 1.25rem; } .tile.v1024 { background: #edc53f; color: #fff; font-size: 1.1rem; }
+  .tile.v2048 { background: #edc22e; color: #fff; font-size: 1.1rem; box-shadow: 0 0 12px #edc22e; }
+  #board { touch-action: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>2048</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Puntos: <span id="score">0</span></div>
+      <div class="best">Récord: <span id="best">0</span></div>
+      <button class="btn" id="restart">Reiniciar</button>
+    </div>
+    <div id="board"></div>
+    <p class="hint">Flechas para mover · En el celular, desliza el dedo</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Desliza las fichas con las flechas del teclado o deslizando el dedo. Cuando dos fichas iguales chocan, se fusionan en una sola con el doble de valor. Suma puntos con cada fusión y llega a la ficha <strong>2048</strong> para ganar. El juego termina cuando ya no hay movimientos posibles.</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var boardEl = document.getElementById("board");
+  var scoreEl = document.getElementById("score");
+  var bestEl = document.getElementById("best");
+  var msgEl = document.getElementById("message");
+  var grid, score, best = 0, over = false, won = false;
+
+  try { best = parseInt(localStorage.getItem("chispa-2048-best") || "0", 10) || 0; } catch (e) {}
+  bestEl.textContent = best;
+
+  function emptyCells() {
+    var cells = [];
+    for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) if (!grid[r][c]) cells.push([r, c]);
+    return cells;
+  }
+
+  function addTile() {
+    var cells = emptyCells();
+    if (!cells.length) return;
+    var cell = cells[Math.floor(Math.random() * cells.length)];
+    grid[cell[0]][cell[1]] = Math.random() < 0.9 ? 2 : 4;
+  }
+
+  function render() {
+    boardEl.innerHTML = "";
+    for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) {
+      var d = document.createElement("div");
+      var v = grid[r][c];
+      d.className = "tile" + (v ? " v" + v : "");
+      d.textContent = v || "";
+      boardEl.appendChild(d);
+    }
+    scoreEl.textContent = score;
+  }
+
+  function slide(row) {
+    var arr = row.filter(function (v) { return v; });
+    for (var i = 0; i < arr.length - 1; i++) {
+      if (arr[i] === arr[i + 1]) { arr[i] *= 2; score += arr[i]; arr.splice(i + 1, 1); }
+    }
+    while (arr.length < 4) arr.push(0);
+    return arr;
+  }
+
+  function arraysEqual(a, b) { return a.every(function (v, i) { return v === b[i]; }); }
+
+  function canMove() {
+    if (emptyCells().length) return true;
+    for (var r = 0; r < 4; r++) for (var c = 0; c < 4; c++) {
+      if ((c < 3 && grid[r][c] === grid[r][c + 1]) || (r < 3 && grid[r][c] === grid[r + 1][c])) return true;
+    }
+    return false;
+  }
+
+  function move(dir) {
+    if (over) return;
+    var before = JSON.stringify(grid);
+    if (dir === "left" || dir === "right") {
+      for (var r = 0; r < 4; r++) {
+        var row = grid[r].slice();
+        if (dir === "right") row.reverse();
+        row = slide(row);
+        if (dir === "right") row.reverse();
+        grid[r] = row;
+      }
+    } else {
+      for (var c = 0; c < 4; c++) {
+        var col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
+        if (dir === "down") col.reverse();
+        col = slide(col);
+        if (dir === "down") col.reverse();
+        for (var r2 = 0; r2 < 4; r2++) grid[r2][c] = col[r2];
+      }
+    }
+    if (JSON.stringify(grid) !== before) {
+      addTile();
+      render();
+      if (score > best) { best = score; bestEl.textContent = best; try { localStorage.setItem("chispa-2048-best", String(best)); } catch (e) {} }
+      if (!won && grid.some(function (row) { return row.indexOf(2048) !== -1; })) {
+        won = true;
+        msgEl.textContent = "¡Ganaste! Llegaste al 2048. Puedes seguir jugando para sumar más puntos.";
+        msgEl.className = "message show win";
+      } else if (!canMove()) {
+        over = true;
+        msgEl.textContent = "Fin del juego: ya no hay movimientos. Hiciste " + score + " puntos.";
+        msgEl.className = "message show lose";
+      }
+    }
+  }
+
+  function reset() {
+    grid = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+    score = 0; over = false; won = false;
+    msgEl.className = "message"; msgEl.textContent = "";
+    addTile(); addTile();
+    render();
+  }
+
+  document.addEventListener("keydown", function (e) {
+    var map = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" };
+    if (map[e.key]) { move(map[e.key]); e.preventDefault(); }
+  });
+
+  var tx = 0, ty = 0;
+  boardEl.addEventListener("touchstart", function (e) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; e.preventDefault(); }, { passive: false });
+  boardEl.addEventListener("touchend", function (e) {
+    var dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+    if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? "right" : "left");
+    else move(dy > 0 ? "down" : "up");
+    e.preventDefault();
+  }, { passive: false });
+
+  document.getElementById("restart").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>

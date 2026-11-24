@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flappy Tortuga — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Flappy Tortuga</h1></div>
+  <div class="panel">
+    <div class="scorebar">
+      <div class="score">Puntos: <span id="score">0</span></div>
+      <div class="best">Récord: <span id="best">0</span></div>
+      <button class="btn" id="restart">Reiniciar</button>
+    </div>
+    <canvas id="game" width="400" height="480"></canvas>
+    <p class="hint">Clic, toque o barra espaciadora para volar</p>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>La tortuga cae sola: cada clic, toque o pulsación de la barra espaciadora le da un aleteo hacia arriba. Pasa entre las tuberías verdes sin tocarlas ni tocar el suelo. Cada tubería que pasas suma 1 punto y el juego se vuelve un poco más rápido.</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  var scoreEl = document.getElementById("score");
+  var bestEl = document.getElementById("best");
+  var msgEl = document.getElementById("message");
+  var W = 400, H = 480, GROUND = 40;
+  var turtle, pipes, score, best = 0, frame = 0, state = "ready", raf = null;
+
+  try { best = parseInt(localStorage.getItem("chispa-flappy-best") || "0", 10) || 0; } catch (e) {}
+  bestEl.textContent = best;
+
+  function reset() {
+    turtle = { x: 90, y: 200, vy: 0, r: 20 };
+    pipes = [];
+    score = 0; frame = 0; state = "ready";
+    scoreEl.textContent = "0";
+    msgEl.className = "message"; msgEl.textContent = "";
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function flap() {
+    if (state === "ready") { state = "playing"; }
+    if (state === "playing") { turtle.vy = -8; }
+    else if (state === "over") { reset(); }
+  }
+
+  function spawnPipe() {
+    var gap = 135;
+    var topH = 60 + Math.random() * (H - GROUND - gap - 120);
+    pipes.push({ x: W, top: topH, gap: gap, w: 56, passed: false });
+  }
+
+  function update() {
+    frame++;
+    if (state === "playing") {
+      turtle.vy += 0.45;
+      turtle.y += turtle.vy;
+      if (frame % 95 === 0) spawnPipe();
+      var speed = 2.2 + Math.min(score * 0.08, 2);
+      pipes.forEach(function (p) { p.x -= speed; });
+      pipes = pipes.filter(function (p) { return p.x + p.w > -10; });
+      pipes.forEach(function (p) {
+        if (!p.passed && p.x + p.w < turtle.x - turtle.r) {
+          p.passed = true; score++;
+          scoreEl.textContent = score;
+          if (score > best) { best = score; bestEl.textContent = best; try { localStorage.setItem("chispa-flappy-best", String(best)); } catch (e) {} }
+        }
+      });
+      var hitGround = turtle.y + turtle.r >= H - GROUND;
+      var hitCeil = turtle.y - turtle.r <= 0;
+      var hitPipe = pipes.some(function (p) {
+        var inX = turtle.x + turtle.r > p.x && turtle.x - turtle.r < p.x + p.w;
+        return inX && (turtle.y - turtle.r < p.top || turtle.y + turtle.r > p.top + p.gap);
+      });
+      if (hitGround || hitCeil || hitPipe) {
+        state = "over";
+        msgEl.textContent = "¡La tortuga chocó! Hiciste " + score + " puntos. Toca la pantalla o pulsa Reiniciar para intentarlo de nuevo.";
+        msgEl.className = "message show lose";
+      }
+    }
+  }
+
+  function drawTurtle() {
+    ctx.save();
+    ctx.translate(turtle.x, turtle.y);
+    ctx.rotate(Math.max(-0.4, Math.min(0.6, turtle.vy * 0.05)));
+    ctx.fillStyle = "#16a34a";
+    ctx.beginPath(); ctx.ellipse(0, 0, 24, 18, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#dcfce7";
+    ctx.beginPath(); ctx.ellipse(0, 0, 15, 11, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#166534"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#22c55e";
+    ctx.beginPath(); ctx.arc(22, -6, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(26, -9, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#111827";
+    ctx.beginPath(); ctx.arc(27, -9, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#16a34a";
+    ctx.beginPath(); ctx.ellipse(-14, 14, 8, 5, 0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(10, 15, 8, 5, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#7dd3fc"); g.addColorStop(1, "#e0f2fe");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#fef9c3";
+    ctx.beginPath(); ctx.arc(340, 55, 26, 0, Math.PI * 2); ctx.fill();
+    pipes.forEach(function (p) {
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(p.x, 0, p.w, p.top);
+      ctx.fillRect(p.x, p.top + p.gap, p.w, H - GROUND - p.top - p.gap);
+      ctx.fillStyle = "#16a34a";
+      ctx.fillRect(p.x - 4, p.top - 16, p.w + 8, 16);
+      ctx.fillRect(p.x - 4, p.top + p.gap, p.w + 8, 16);
+      ctx.fillStyle = "#4ade80";
+      ctx.fillRect(p.x + 6, 0, 8, p.top);
+      ctx.fillRect(p.x + 6, p.top + p.gap, 8, H - GROUND - p.top - p.gap);
+    });
+    ctx.fillStyle = "#a16207"; ctx.fillRect(0, H - GROUND, W, GROUND);
+    ctx.fillStyle = "#ca8a04"; ctx.fillRect(0, H - GROUND, W, 6);
+    drawTurtle();
+    if (state === "ready") {
+      ctx.fillStyle = "rgba(15,23,42,.75)";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 26px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("Flappy Tortuga", W / 2, H / 2 - 20);
+      ctx.font = "16px sans-serif";
+      ctx.fillText("Toca, haz clic o pulsa Espacio para volar", W / 2, H / 2 + 12);
+    }
+  }
+
+  function loop() {
+    update();
+    draw();
+    if (state !== "over" || true) raf = requestAnimationFrame(loop);
+  }
+
+  canvas.addEventListener("pointerdown", function (e) { flap(); e.preventDefault(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space" || e.key === "ArrowUp") { flap(); e.preventDefault(); }
+  });
+  document.getElementById("restart").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>
