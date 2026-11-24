@@ -21,12 +21,14 @@
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Guía a la serpiente para comerse las manzanas rojas. Cada manzana suma 10 puntos y la serpiente crece y va más rápido. No choques contra las paredes ni contra tu propio cuerpo. Tu récord se guarda en este navegador.</p>
+    <p>Guía a Broti, la criatura hoja, para comerse las bayas. Cada baya suma 10 puntos y Broti crece y va más rápido. No choques contra las paredes ni contra tu propio cuerpo. Tu récord se guarda en este navegador.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
   var scoreEl = document.getElementById("score");
@@ -82,24 +84,27 @@
     ctx.fillStyle = "#14532d"; ctx.fillRect(0, 0, 400, 400);
     ctx.fillStyle = "#166534";
     for (var i = 0; i < GRID; i++) for (var j = 0; j < GRID; j++) if ((i + j) % 2 === 0) ctx.fillRect(i * CELL, j * CELL, CELL, CELL);
-    ctx.fillStyle = "#ef4444";
-    ctx.beginPath(); ctx.arc(food.x * CELL + 10, food.y * CELL + 10, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#166534"; ctx.fillRect(food.x * CELL + 8, food.y * CELL - 1, 3, 7);
+    /* Baya: círculo rojo con una hojita verde */
+    ctx.fillStyle = "#e11d48";
+    ctx.beginPath(); ctx.arc(food.x * CELL + 10, food.y * CELL + 11, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#22c55e";
+    ctx.fillRect(food.x * CELL + 9, food.y * CELL + 1, 3, 5);
+    ctx.beginPath(); ctx.ellipse(food.x * CELL + 14, food.y * CELL + 4, 4, 2, 0.6, 0, Math.PI * 2); ctx.fill();
     snake.forEach(function (s, k) {
       ctx.fillStyle = k === 0 ? "#4ade80" : "#22c55e";
       ctx.fillRect(s.x * CELL + 1, s.y * CELL + 1, CELL - 2, CELL - 2);
     });
     if (snake.length) {
-      ctx.fillStyle = "#111827";
+      /* La cabeza es Broti, la criatura hoja, con su sprite pixel-art */
       var h0 = snake[0];
-      ctx.beginPath(); ctx.arc(h0.x * CELL + 7, h0.y * CELL + 7, 2.5, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(h0.x * CELL + 13, h0.y * CELL + 7, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "broti", "idle", 0, h0.x * CELL, h0.y * CELL, 1.25, false);
     }
   }
 
   function gameOver() {
     alive = false; clearInterval(timer);
-    msgEl.textContent = "¡Chocaste! Hiciste " + score + " puntos. Pulsa Reiniciar para jugar de nuevo.";
+    msgEl.textContent = "¡Broti chocó! Hiciste " + score + " puntos. Pulsa Reiniciar para jugar de nuevo.";
     msgEl.className = "message show lose";
   }
 

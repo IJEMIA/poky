@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Corredor Infinito — Chispa Juegos</title>
+<title>Corre Brasa — Chispa Juegos</title>
 <link rel="stylesheet" href="juegos.css">
 </head>
 <body>
 <div class="wrap">
-  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Corredor Infinito</h1></div>
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Corre Brasa</h1></div>
   <div class="panel">
     <div class="scorebar">
       <div class="score">Distancia: <span id="score">0</span> m</div>
@@ -21,12 +21,14 @@
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Tu corredor avanza solo y cada vez más rápido. Salta los bloques y las piedras con la barra espaciadora, un clic o un toque. Puedes saltar dos veces en el aire para un doble salto. Cada metro recorrido suma puntos: ¿hasta dónde llegas?</p>
+    <p>Brasa, la criatura de fuego, corre sola y cada vez más rápido. Salta los bloques y las piedras con la barra espaciadora, un clic o un toque. Puedes saltar dos veces en el aire para un doble salto. Cada metro recorrido suma puntos: ¿hasta dónde llegas?</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
   var scoreEl = document.getElementById("score");
@@ -77,7 +79,7 @@
     if (m > best) { best = m; bestEl.textContent = best; try { localStorage.setItem("chispa-corredor-best", String(best)); } catch (e) {} }
     if (hit) {
       state = "over";
-      msgEl.textContent = "¡Te estrellaste! Recorriste " + m + " metros. Toca la pantalla o pulsa Reiniciar para correr de nuevo.";
+      msgEl.textContent = "¡Brasa se estrelló! Recorriste " + m + " metros. Toca la pantalla o pulsa Reiniciar para correr de nuevo.";
       msgEl.className = "message show lose";
     }
   }
@@ -98,21 +100,20 @@
       ctx.fillStyle = "#78716c";
       ctx.fillRect(o.x + 3, GROUND_Y - o.h + 4, o.w - 6, 6);
     });
-    var leg = state === "playing" && player.y >= GROUND_Y - player.h ? Math.sin(frame * 0.5) * 8 : 0;
-    ctx.fillStyle = "#dc2626";
-    ctx.fillRect(player.x, player.y, player.w, player.h - 12);
-    ctx.fillStyle = "#fca5a5";
-    ctx.beginPath(); ctx.arc(player.x + 16, player.y - 6, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#111827";
-    ctx.beginPath(); ctx.arc(player.x + 21, player.y - 8, 2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#7f1d1d";
-    ctx.fillRect(player.x + 4, player.y + player.h - 12 + leg, 8, 12);
-    ctx.fillRect(player.x + 20, player.y + player.h - 12 - leg, 8, 12);
+    /* Brasa, la criatura de fuego, dibujada con su sprite pixel-art */
+    var onGround = player.y >= GROUND_Y - player.h;
+    var step = Math.floor(frame / 8) % 2;
+    ctx.imageSmoothingEnabled = false;
+    if (state === "playing" && onGround) {
+      S.drawCreature(ctx, "brasa", "walk", step, player.x - 8, player.y - 4, 3, false);
+    } else {
+      S.drawCreature(ctx, "brasa", "idle", 0, player.x - 8, player.y - 4, 3, false);
+    }
     if (state === "ready") {
       ctx.fillStyle = "rgba(15,23,42,.7)";
       ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = "#fff"; ctx.font = "bold 24px sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("Corredor Infinito", W / 2, H / 2 - 10);
+      ctx.fillText("Corre Brasa", W / 2, H / 2 - 10);
       ctx.font = "15px sans-serif";
       ctx.fillText("Espacio, clic o toque para saltar", W / 2, H / 2 + 18);
     }

@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="juegos.css">
 <style>
   #board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 360px; margin: 0 auto; }
-  .cell { aspect-ratio: 1; font-size: 3rem; font-weight: 800; background: #fff; border: 3px solid #e5e7eb; border-radius: 12px; cursor: pointer; color: #111827; }
+  .cell { aspect-ratio: 1; font-size: 3rem; font-weight: 800; background: #fff; border: 3px solid #e5e7eb; border-radius: 12px; cursor: pointer; color: #111827; display: flex; align-items: center; justify-content: center; }
+  .cell canvas { width: 72%; height: 72%; image-rendering: pixelated; }
   .cell:hover:not(:disabled) { border-color: #7c3aed; background: #f5f3ff; }
   .cell.x { color: #dc2626; }
   .cell.o { color: #2563eb; }
@@ -20,22 +21,24 @@
   <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Tres en Raya</h1></div>
   <div class="panel">
     <div class="scorebar">
-      <div class="score">Tú (X): <span id="score-x">0</span></div>
-      <div class="best">Empates: <span id="score-d">0</span> · PC (O): <span id="score-o">0</span></div>
+      <div class="score">Tú (Broti): <span id="score-x">0</span></div>
+      <div class="best">Empates: <span id="score-d">0</span> · PC (Brasa): <span id="score-o">0</span></div>
       <button class="btn" id="restart">Reiniciar</button>
     </div>
     <div id="board"></div>
-    <p class="hint">Tú juegas con X. La computadora juega con O.</p>
+    <p class="hint">Tú juegas con Broti. La computadora juega con Brasa.</p>
     <div class="message" id="message"></div>
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Toca una casilla vacía para poner tu X. La computadora responde con O. Gana quien logre tres en línea: horizontal, vertical o diagonal. Si el tablero se llena sin ganador, es empate.</p>
+    <p>Toca una casilla vacía para poner a Broti. La computadora responde con Brasa. Gana quien logre tres en línea: horizontal, vertical o diagonal. Si el tablero se llena sin ganador, es empate.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
   var boardEl = document.getElementById("board");
   var msgEl = document.getElementById("message");
   var sxEl = document.getElementById("score-x");
@@ -68,10 +71,22 @@
     return null;
   }
 
+  function spriteCanvas(id) {
+    var cv = document.createElement("canvas");
+    cv.width = 64; cv.height = 64;
+    var c2 = cv.getContext("2d");
+    c2.imageSmoothingEnabled = false;
+    S.drawCreature(c2, id, "idle", 0, 0, 0, 4, false);
+    return cv;
+  }
+
   function render() {
     for (var i = 0; i < 9; i++) {
       var btn = boardEl.children[i];
-      btn.textContent = board[i];
+      btn.innerHTML = "";
+      /* Broti es la X del jugador; Brasa es la O de la computadora */
+      if (board[i] === "X") btn.appendChild(spriteCanvas("broti"));
+      else if (board[i] === "O") btn.appendChild(spriteCanvas("brasa"));
       btn.classList.toggle("x", board[i] === "X");
       btn.classList.toggle("o", board[i] === "O");
       btn.disabled = over || board[i] !== "";
@@ -82,8 +97,8 @@
     over = true;
     if (w) {
       w.line.forEach(function (i) { boardEl.children[i].classList.add("win-cell"); });
-      if (w.who === "X") { scores.X++; msgEl.textContent = "¡Ganaste! Tres en línea."; msgEl.className = "message show win"; }
-      else { scores.O++; msgEl.textContent = "Ganó la computadora. Inténtalo de nuevo."; msgEl.className = "message show lose"; }
+      if (w.who === "X") { scores.X++; msgEl.textContent = "¡Ganaste! Broti logró tres en línea."; msgEl.className = "message show win"; }
+      else { scores.O++; msgEl.textContent = "Ganó Brasa, la computadora. Inténtalo de nuevo."; msgEl.className = "message show lose"; }
     } else {
       scores.D++;
       msgEl.textContent = "Empate. Nadie logró tres en línea.";

@@ -29,6 +29,7 @@
       <div class="side">
         <h3>Siguiente pieza</h3>
         <canvas id="next" width="120" height="80"></canvas>
+        <p>Colores de Broti, Brasa y Burbu</p>
         <p>← → mover<br>↓ bajar<br>↑ girar<br>Espacio: caída rápida</p>
       </div>
     </div>
@@ -43,12 +44,14 @@
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Las piezas caen una a una: muévelas con las flechas, gíralas con la flecha arriba y complétalas líneas horizontales para borrarlas. Cada línea vale 100 puntos, y cada 10 líneas subes de nivel y todo cae más rápido. Si las piezas llegan arriba, se acaba el juego. En el celular usa los botones de abajo.</p>
+    <p>Las piezas caen una a una: muévelas con las flechas, gíralas con la flecha arriba y complétalas líneas horizontales para borrarlas. Las piezas usan los colores de las tres criaturas: verde de Broti, naranja de Brasa y azul de Burbu. Cada línea vale 100 puntos, y cada 10 líneas subes de nivel y todo cae más rápido. Si las piezas llegan arriba, se acaba el juego. En el celular usa los botones de abajo.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
   var nextCv = document.getElementById("next");
@@ -58,14 +61,15 @@
   var levelEl = document.getElementById("level");
   var msgEl = document.getElementById("message");
   var COLS = 10, ROWS = 20, CELL = 30;
+  /* Piezas con los colores de las tres criaturas */
   var SHAPES = {
-    I: { m: [[1, 1, 1, 1]], c: "#06b6d4" },
+    I: { m: [[1, 1, 1, 1]], c: S.CREATURES.burbu.color },
     O: { m: [[1, 1], [1, 1]], c: "#facc15" },
-    T: { m: [[0, 1, 0], [1, 1, 1]], c: "#a855f7" },
-    S: { m: [[0, 1, 1], [1, 1, 0]], c: "#22c55e" },
+    T: { m: [[0, 1, 0], [1, 1, 1]], c: S.CREATURES.broti.color },
+    S: { m: [[0, 1, 1], [1, 1, 0]], c: "#2f9e44" },
     Z: { m: [[1, 1, 0], [0, 1, 1]], c: "#ef4444" },
-    J: { m: [[1, 0, 0], [1, 1, 1]], c: "#3b82f6" },
-    L: { m: [[0, 0, 1], [1, 1, 1]], c: "#f97316" }
+    J: { m: [[1, 0, 0], [1, 1, 1]], c: "#0ea5e9" },
+    L: { m: [[0, 0, 1], [1, 1, 1]], c: S.CREATURES.brasa.color }
   };
   var KEYS = Object.keys(SHAPES);
   var board, cur, next, score, lines, level, over, dropTimer = 0, last = 0, raf = null;

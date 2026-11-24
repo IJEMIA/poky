@@ -12,7 +12,8 @@
   .card3d.flipped .inner, .card3d.matched .inner { transform: rotateY(180deg); }
   .face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 10px; backface-visibility: hidden; font-weight: 800; }
   .face.front { background: linear-gradient(135deg, #7c3aed, #db2777); color: #fff; font-size: 1.6rem; box-shadow: 0 3px 0 rgba(0,0,0,.2); }
-  .face.back { background: #fef3c7; color: #9d174d; font-size: 2rem; transform: rotateY(180deg); border: 2px solid #f59e0b; }
+  .face.back { background: #fef3c7; color: #9d174d; font-size: .8rem; transform: rotateY(180deg); border: 2px solid #f59e0b; flex-direction: column; gap: 2px; }
+  .face.back canvas { width: 52px; height: 52px; image-rendering: pixelated; }
   .card3d.matched .face.back { background: #dcfce7; border-color: #22c55e; color: #166534; }
 </style>
 </head>
@@ -31,17 +32,29 @@
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Hay 16 cartas boca abajo con 8 pares de símbolos. Voltea dos cartas por turno: si son iguales, quedan boca arriba; si no, se vuelven a voltear. Encuentra los 8 pares en la menor cantidad de movimientos posible.</p>
+    <p>Hay 16 cartas boca abajo con 8 parejas de criaturas y entrenadores: Broti, Brasa y Burbu en dos poses cada uno, y el entrenador y la entrenadora. Voltea dos cartas por turno: si son iguales, quedan boca arriba; si no, se vuelven a voltear. Encuentra los 8 pares en la menor cantidad de movimientos posible.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
+  /* 8 parejas: cada criatura en dos poses + los dos entrenadores */
+  var FACES = [
+    { id: "broti", kind: "idle", label: "Broti" },
+    { id: "broti", kind: "walk", frame: 0, label: "Broti" },
+    { id: "brasa", kind: "idle", label: "Brasa" },
+    { id: "brasa", kind: "walk", frame: 0, label: "Brasa" },
+    { id: "burbu", kind: "idle", label: "Burbu" },
+    { id: "burbu", kind: "walk", frame: 0, label: "Burbu" },
+    { id: "chico", kind: "trainer", label: "Entrenador" },
+    { id: "chica", kind: "trainer", label: "Entrenadora" }
+  ];
   var boardEl = document.getElementById("board");
   var pairsEl = document.getElementById("pairs");
   var movesEl = document.getElementById("moves");
   var msgEl = document.getElementById("message");
-  var SYMBOLS = ["★", "♥", "♦", "♣", "▲", "●", "■", "◆"];
   var first = null, lock = false, pairs = 0, moves = 0;
 
   function shuffle(arr) {
@@ -53,16 +66,36 @@
   }
 
   function reset() {
-    var deck = shuffle(SYMBOLS.concat(SYMBOLS));
+    var deck = shuffle([0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7]);
     boardEl.innerHTML = "";
     first = null; lock = false; pairs = 0; moves = 0;
     pairsEl.textContent = "0"; movesEl.textContent = "0";
     msgEl.className = "message"; msgEl.textContent = "";
-    deck.forEach(function (sym) {
+    deck.forEach(function (fi) {
+      var face = FACES[fi];
       var card = document.createElement("div");
       card.className = "card3d";
-      card.setAttribute("data-sym", sym);
-      card.innerHTML = '<div class="inner"><div class="face front">?</div><div class="face back">' + sym + "</div></div>";
+      card.setAttribute("data-face", fi);
+      var inner = document.createElement("div");
+      inner.className = "inner";
+      var front = document.createElement("div");
+      front.className = "face front";
+      front.textContent = "?";
+      var back = document.createElement("div");
+      back.className = "face back";
+      var cv = document.createElement("canvas");
+      cv.width = 64; cv.height = 64;
+      var c2 = cv.getContext("2d");
+      c2.imageSmoothingEnabled = false;
+      if (face.kind === "trainer") S.drawTrainer(c2, face.id, 0, 0, 0, 4, false);
+      else S.drawCreature(c2, face.id, face.kind, face.frame || 0, 0, 0, 4, false);
+      back.appendChild(cv);
+      var lbl = document.createElement("span");
+      lbl.textContent = face.label;
+      back.appendChild(lbl);
+      inner.appendChild(front);
+      inner.appendChild(back);
+      card.appendChild(inner);
       card.addEventListener("click", function () { flip(card); });
       boardEl.appendChild(card);
     });
@@ -74,7 +107,7 @@
     if (!first) { first = card; return; }
     moves++;
     movesEl.textContent = moves;
-    if (first.getAttribute("data-sym") === card.getAttribute("data-sym")) {
+    if (first.getAttribute("data-face") === card.getAttribute("data-face")) {
       first.classList.add("matched");
       card.classList.add("matched");
       first = null;

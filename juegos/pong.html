@@ -11,26 +11,28 @@
   <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Pong · 2 jugadores</h1></div>
   <div class="panel">
     <div class="scorebar">
-      <div class="score">Jugador 1 (W/S): <span id="score1">0</span></div>
+      <div class="score">Entrenador (W/S): <span id="score1">0</span></div>
       <div class="best">Gana quien llegue a 5</div>
-      <div class="score">Jugador 2 (↑/↓): <span id="score2">0</span></div>
+      <div class="score">Entrenadora (↑/↓): <span id="score2">0</span></div>
     </div>
     <div class="scorebar">
       <button class="btn green" id="start">Empezar</button>
       <button class="btn" id="restart">Reiniciar</button>
     </div>
     <canvas id="game" width="640" height="400"></canvas>
-    <p class="hint">Jugador 1: teclas W (arriba) y S (abajo) · Jugador 2: flechas ↑ y ↓</p>
+    <p class="hint">Entrenador: teclas W (arriba) y S (abajo) · Entrenadora: flechas ↑ y ↓</p>
     <div class="message" id="message"></div>
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Dos jugadores en el mismo teclado. El Jugador 1 mueve su paleta con <strong>W</strong> y <strong>S</strong>; el Jugador 2, con las flechas <strong>↑</strong> y <strong>↓</strong>. Rebota la pelota y anota cuando pase la paleta rival. Gana quien llegue primero a 5 puntos. La pelota va más rápido con cada punto.</p>
+    <p>Dos jugadores en el mismo teclado. El <strong>entrenador</strong> mueve su paleta con <strong>W</strong> y <strong>S</strong>; la <strong>entrenadora</strong>, con las flechas <strong>↑</strong> y <strong>↓</strong>. Rebota la pokébola y anota cuando pase la paleta rival. Gana quien llegue primero a 5 puntos. La pelota va más rápido con cada punto.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
   var s1El = document.getElementById("score1");
@@ -87,14 +89,30 @@
     if (who === 1) s1El.textContent = s1; else s2El.textContent = s2;
     if (s1 >= WIN || s2 >= WIN) {
       state = "over";
-      msgEl.textContent = "¡Ganó el Jugador " + who + "! " + s1 + " – " + s2 + ". Pulsa Reiniciar para la revancha.";
+      var winner = who === 1 ? "Entrenador" : "Entrenadora";
+      msgEl.textContent = "¡Ganó el " + winner + "! " + s1 + " – " + s2 + ". Pulsa Reiniciar para la revancha.";
       msgEl.className = "message show win";
     } else {
       resetPositions();
       state = "ready";
-      msgEl.textContent = "Punto para el Jugador " + who + ". Pulsa Empezar para seguir.";
+      msgEl.textContent = "Punto para " + (who === 1 ? "el Entrenador" : "la Entrenadora") + ". Pulsa Empezar para seguir.";
       msgEl.className = "message show info";
     }
+  }
+
+  /* Pelota pokébola genérica: mitad roja, mitad blanca, sin marca */
+  function drawPokeball(x, y, r) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = "#ef4444"; ctx.fillRect(x - r, y - r, r * 2, r);
+    ctx.fillStyle = "#f8fafc"; ctx.fillRect(x - r, y, r * 2, r);
+    ctx.restore();
+    ctx.strokeStyle = "#111827"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.stroke();
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, Math.PI * 2); ctx.fill();
+    ctx.stroke();
   }
 
   function draw() {
@@ -105,17 +123,20 @@
     ctx.fillStyle = "#fff"; ctx.font = "bold 52px sans-serif"; ctx.textAlign = "center";
     ctx.fillText(s1, W / 2 - 70, 70);
     ctx.fillText(s2, W / 2 + 70, 70);
-    ctx.fillStyle = "#38bdf8"; ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
-    ctx.fillStyle = "#f472b6"; ctx.fillRect(p2.x, p2.y, p2.w, p2.h);
-    ctx.fillStyle = "#facc15";
-    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+    /* Las paletas son los dos entrenadores, con su sprite pixel-art */
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = "#2563eb"; ctx.fillRect(p1.x, p1.y, p1.w, p1.h);
+    ctx.fillStyle = "#dc2626"; ctx.fillRect(p2.x, p2.y, p2.w, p2.h);
+    S.drawTrainer(ctx, "chico", 0, p1.x - 12, p1.y + p1.h / 2 - 24, 3, false);
+    S.drawTrainer(ctx, "chica", 0, p2.x + p2.w - 36, p2.y + p2.h / 2 - 24, 3, false);
+    drawPokeball(ball.x, ball.y, ball.r);
     if (state === "ready" && s1 === 0 && s2 === 0) {
       ctx.fillStyle = "rgba(15,23,42,.75)";
       ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = "#fff"; ctx.font = "bold 28px sans-serif";
       ctx.fillText("Pong · 2 jugadores", W / 2, H / 2 - 12);
       ctx.font = "16px sans-serif";
-      ctx.fillText("Jugador 1: W / S — Jugador 2: flechas ↑ / ↓", W / 2, H / 2 + 18);
+      ctx.fillText("Entrenador: W / S — Entrenadora: flechas ↑ / ↓", W / 2, H / 2 + 18);
       ctx.fillText("Pulsa Empezar para jugar", W / 2, H / 2 + 44);
     }
   }

@@ -7,11 +7,13 @@
 <link rel="stylesheet" href="juegos.css">
 <style>
   #pads { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 380px; margin: 0 auto; }
-  .pad { aspect-ratio: 1; border: none; border-radius: 18px; cursor: pointer; opacity: .55; transition: opacity .12s ease, transform .12s ease; font-size: 1.1rem; font-weight: 800; color: rgba(255,255,255,.9); }
+  .pad { aspect-ratio: 1; border: none; border-radius: 18px; cursor: pointer; opacity: .55; transition: opacity .12s ease, transform .12s ease; font-size: 1.1rem; font-weight: 800; color: rgba(255,255,255,.9); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .pad canvas { width: 64px; height: 64px; image-rendering: pixelated; }
   .pad.lit { opacity: 1; transform: scale(1.04); box-shadow: 0 0 24px rgba(255,255,255,.5); }
   .pad:disabled { cursor: default; }
-  #pad-0 { background: #22c55e; } #pad-1 { background: #ef4444; }
-  #pad-2 { background: #eab308; } #pad-3 { background: #3b82f6; }
+  /* Verde Broti · naranja Brasa · azul Burbu · rojo entrenador */
+  #pad-0 { background: #58b368; } #pad-1 { background: #f97316; }
+  #pad-2 { background: #38bdf8; } #pad-3 { background: #dc2626; }
 </style>
 </head>
 <body>
@@ -25,23 +27,33 @@
       <button class="btn secondary" id="restart">Reiniciar</button>
     </div>
     <div id="pads">
-      <button class="pad" id="pad-0" aria-label="Verde">Verde</button>
-      <button class="pad" id="pad-1" aria-label="Rojo">Rojo</button>
-      <button class="pad" id="pad-2" aria-label="Amarillo">Amarillo</button>
-      <button class="pad" id="pad-3" aria-label="Azul">Azul</button>
+      <button class="pad" id="pad-0" aria-label="Broti"><canvas width="64" height="64"></canvas><span>Broti</span></button>
+      <button class="pad" id="pad-1" aria-label="Brasa"><canvas width="64" height="64"></canvas><span>Brasa</span></button>
+      <button class="pad" id="pad-2" aria-label="Burbu"><canvas width="64" height="64"></canvas><span>Burbu</span></button>
+      <button class="pad" id="pad-3" aria-label="Entrenador"><canvas width="64" height="64"></canvas><span>Entrenador</span></button>
     </div>
     <p class="hint">Escucha la secuencia y repítela en el mismo orden</p>
     <div class="message" id="message"></div>
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Pulsa «Empezar»: Simon enciende un color con su sonido. Repite la secuencia tocando los colores en el mismo orden. Cada ronda agrega un color más y la secuencia se reproduce un poco más rápido. Si te equivocas, el juego termina. Tu mejor ronda se guarda en este navegador.</p>
+    <p>Pulsa «Empezar»: Simon enciende un color con su sonido. Repite la secuencia tocando los colores en el mismo orden. Cada color es una criatura: verde Broti, naranja Brasa, azul Burbu y rojo el entrenador. Cada ronda agrega un color más y la secuencia se reproduce un poco más rápido. Si te equivocas, el juego termina. Tu mejor ronda se guarda en este navegador.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
   var pads = [0, 1, 2, 3].map(function (i) { return document.getElementById("pad-" + i); });
+  /* Cada botón muestra la cara de su criatura */
+  ["broti", "brasa", "burbu", "chico"].forEach(function (face, i) {
+    var cv = pads[i].querySelector("canvas");
+    var c2 = cv.getContext("2d");
+    c2.imageSmoothingEnabled = false;
+    if (face === "chico") S.drawTrainer(c2, "chico", 0, 0, 0, 4, false);
+    else S.drawCreature(c2, face, "idle", 0, 0, 0, 4, false);
+  });
   var roundEl = document.getElementById("round");
   var bestEl = document.getElementById("best");
   var msgEl = document.getElementById("message");

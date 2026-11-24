@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batalla de criaturas — Chispa Juegos</title>
+<link rel="stylesheet" href="juegos.css">
+<style>
+  .pick-grid { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin: 12px 0; }
+  .pick {
+    background: #f8fafc; border: 3px solid #e2e8f0; border-radius: 14px;
+    padding: 12px; width: 170px; text-align: center; cursor: pointer;
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .pick:hover { transform: translateY(-3px); border-color: #f97316; }
+  .pick canvas { background: #e0f2fe; border-radius: 10px; image-rendering: pixelated; }
+  .pick h3 { margin: 8px 0 2px; font-size: 1.15rem; }
+  .pick .type { display: inline-block; font-weight: 800; font-size: .8rem; color: #fff; padding: 2px 10px; border-radius: 999px; margin-bottom: 6px; }
+  .pick p { font-size: .85rem; color: #475569; }
+  .pick .attacks { font-size: .8rem; color: #6b7280; margin-top: 6px; text-align: left; }
+  .hp-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-weight: 700; font-size: .95rem; }
+  .hp-row .who { min-width: 130px; text-align: left; }
+  .hp-bar { flex: 1; height: 16px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+  .hp-fill { height: 100%; background: #22c55e; width: 100%; transition: width .4s ease, background .4s ease; }
+  .hp-fill.low { background: #f59e0b; }
+  .hp-fill.crit { background: #ef4444; }
+  .hp-num { min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
+  .attack-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+  .attack-grid .btn { flex: 1 1 160px; }
+  .attack-grid .btn small { display: block; font-weight: 600; font-size: .8rem; opacity: .9; }
+  .log {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 10px 12px; margin-top: 12px; min-height: 64px; font-size: .95rem; line-height: 1.5;
+  }
+  .log p { margin: 2px 0; }
+  .log .eff { font-weight: 800; color: #b45309; }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+</style>
+<script src="sprites.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Batalla de criaturas</h1></div>
+  <div class="panel">
+
+    <!-- Pantalla de elección -->
+    <div id="select-screen">
+      <p class="center"><strong>Elige a tu criatura</strong> para pelear contra una criatura salvaje.</p>
+      <div class="pick-grid" id="pick-grid"></div>
+      <p class="hint">Consejo: Hoja vence a Agua, Agua vence a Fuego y Fuego vence a Hoja.</p>
+    </div>
+
+    <!-- Pantalla de batalla -->
+    <div id="battle-screen" class="hidden">
+      <div class="hp-row">
+        <span class="who" id="player-name">—</span>
+        <div class="hp-bar"><div class="hp-fill" id="player-hp"></div></div>
+        <span class="hp-num" id="player-hp-num">100/100</span>
+      </div>
+      <div class="hp-row">
+        <span class="who" id="wild-name">—</span>
+        <div class="hp-bar"><div class="hp-fill" id="wild-hp"></div></div>
+        <span class="hp-num" id="wild-hp-num">100/100</span>
+      </div>
+      <canvas id="game" width="600" height="300"></canvas>
+      <div class="attack-grid" id="attack-grid"></div>
+      <div class="log" id="log"></div>
+      <div class="center" style="margin-top:12px">
+        <button class="btn secondary" id="again">Otra batalla</button>
+        <button class="btn" id="restart">Elegir otra criatura</button>
+      </div>
+    </div>
+
+    <div class="scorebar" style="margin-top:14px">
+      <div class="score">Victorias: <span id="wins">0</span></div>
+      <div class="best">Derrotas: <span id="losses">0</span></div>
+    </div>
+    <div class="message" id="message"></div>
+  </div>
+  <div class="instructions">
+    <h2>Cómo jugar</h2>
+    <p>Elige una de las tres criaturas originales: <strong>Broti</strong> (Hoja), <strong>Brasa</strong> (Fuego) o <strong>Burbu</strong> (Agua). Pelea por turnos contra una criatura salvaje: elige uno de tus tres ataques y luego ataca el rival. Los ataques del tipo de tu criatura son más fuertes contra el tipo débil: Hoja vence a Agua, Agua vence a Fuego y Fuego vence a Hoja. Cuando un ataque es muy eficaz, hace más daño. Gana quien deje al rival sin puntos de salud (PS).</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var S = window.SPRITES;
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  var logEl = document.getElementById("log");
+  var msgEl = document.getElementById("message");
+  var attackGrid = document.getElementById("attack-grid");
+  var selectScreen = document.getElementById("select-screen");
+  var battleScreen = document.getElementById("battle-screen");
+  var W = 600, H = 300, SCALE = 6, SIZE = 16 * SCALE;
+  var player = null, wild = null, state = "select", busy = false;
+  var anim = null, flash = null, t0 = Date.now();
+  var wins = 0, losses = 0, raf = null;
+
+  try { wins = parseInt(localStorage.getItem("chispa-batalla-victorias") || "0", 10) || 0; } catch (e) {}
+  try { losses = parseInt(localStorage.getItem("chispa-batalla-derrotas") || "0", 10) || 0; } catch (e) {}
+  document.getElementById("wins").textContent = wins;
+  document.getElementById("losses").textContent = losses;
+
+  function saveRecord() {
+    try { localStorage.setItem("chispa-batalla-victorias", String(wins)); } catch (e) {}
+    try { localStorage.setItem("chispa-batalla-derrotas", String(losses)); } catch (e) {}
+  }
+
+  /* ---------- Pantalla de elección ---------- */
+  var pickGrid = document.getElementById("pick-grid");
+  var pickCanvases = {};
+  Object.keys(S.CREATURES).forEach(function (id) {
+    var c = S.CREATURES[id];
+    var card = document.createElement("div");
+    card.className = "pick";
+    card.innerHTML =
+      '<canvas width="96" height="96"></canvas>' +
+      '<h3>' + c.name + '</h3>' +
+      '<span class="type" style="background:' + c.color + '">Tipo ' + c.type + '</span>' +
+      '<p>' + c.desc + '</p>' +
+      '<div class="attacks">' + c.attacks.map(function (a) { return "• " + a.name + " (" + a.type + ")"; }).join("<br>") + '</div>';
+    card.addEventListener("click", function () { startBattle(id); });
+    pickGrid.appendChild(card);
+    pickCanvases[id] = card.querySelector("canvas");
+  });
+
+  function drawPickSprites(now) {
+    if (state !== "select") return;
+    Object.keys(pickCanvases).forEach(function (id) {
+      var cv = pickCanvases[id], c2 = cv.getContext("2d");
+      c2.imageSmoothingEnabled = false;
+      c2.clearRect(0, 0, 96, 96);
+      var step = Math.floor(now / 500) % 2;
+      S.drawCreature(c2, id, "walk", step, 0, 0, 6, false);
+    });
+  }
+
+  /* ---------- Batalla ---------- */
+  function makeFighter(id) {
+    var c = S.CREATURES[id];
+    return { id: id, name: c.name, type: c.type, hp: 100, max: 100, attacks: c.attacks };
+  }
+
+  function startBattle(playerId) {
+    var ids = Object.keys(S.CREATURES);
+    var wildId = ids[Math.floor(Math.random() * ids.length)];
+    player = makeFighter(playerId);
+    wild = makeFighter(wildId);
+    wild.hp = 95; wild.max = 95;
+    state = "fight"; busy = false; anim = null; flash = null;
+    selectScreen.classList.add("hidden");
+    battleScreen.classList.remove("hidden");
+    msgEl.className = "message"; msgEl.textContent = "";
+    document.getElementById("player-name").textContent = player.name + " (tú) · Nv. 5";
+    document.getElementById("wild-name").textContent = "Salvaje: " + wild.name + " · Nv. 5";
+    buildAttackButtons();
+    logEl.innerHTML = "<p>¡Apareció una criatura salvaje: <strong>" + wild.name + "</strong>!</p><p>¿Qué debe hacer " + player.name + "?</p>";
+    updateHP();
+  }
+
+  function buildAttackButtons() {
+    attackGrid.innerHTML = "";
+    player.attacks.forEach(function (a) {
+      var b = document.createElement("button");
+      b.className = "btn";
+      b.innerHTML = a.name + "<small>" + a.type + " · " + a.desc + "</small>";
+      b.addEventListener("click", function () { if (!busy && state === "fight") playerTurn(a); });
+      attackGrid.appendChild(b);
+    });
+  }
+
+  function hpFill(el, hp, max) {
+    var pct = Math.max(0, hp / max * 100);
+    el.style.width = pct + "%";
+    el.className = "hp-fill" + (pct <= 20 ? " crit" : pct <= 50 ? " low" : "");
+  }
+
+  function updateHP() {
+    hpFill(document.getElementById("player-hp"), player.hp, player.max);
+    hpFill(document.getElementById("wild-hp"), wild.hp, wild.max);
+    document.getElementById("player-hp-num").textContent = Math.max(0, player.hp) + "/" + player.max;
+    document.getElementById("wild-hp-num").textContent = Math.max(0, wild.hp) + "/" + wild.max;
+  }
+
+  function log(html) {
+    var p = document.createElement("p");
+    p.innerHTML = html;
+    logEl.appendChild(p);
+    while (logEl.children.length > 5) logEl.removeChild(logEl.firstChild);
+  }
+
+  function doAttack(attacker, defender, attack) {
+    var eff = S.effectiveness(attack.type, defender.type);
+    var base = attack.min + Math.floor(Math.random() * (attack.max - attack.min + 1));
+    var dmg = Math.max(1, Math.round(base * eff));
+    defender.hp = Math.max(0, defender.hp - dmg);
+    var who = attacker === player ? "player" : "wild";
+    anim = { who: who, t0: Date.now() };
+    flash = { who: who === "player" ? "wild" : "player", t0: Date.now() + 180 };
+    log("<strong>" + attacker.name + "</strong> usó <strong>" + attack.name + "</strong>. " + defender.name + " perdió " + dmg + " PS.");
+    if (eff > 1) log('<span class="eff">¡Es muy eficaz!</span>');
+    else if (eff < 1) log('<span class="eff">No es muy eficaz…</span>');
+    if (attack.heal) {
+      attacker.hp = Math.min(attacker.max, attacker.hp + attack.heal);
+      log("<strong>" + attacker.name + "</strong> recuperó " + attack.heal + " PS.");
+    }
+    updateHP();
+    return defender.hp <= 0;
+  }
+
+  function playerTurn(attack) {
+    busy = true;
+    var ko = doAttack(player, wild, attack);
+    if (ko) { endBattle(true); return; }
+    setTimeout(wildTurn, 900);
+  }
+
+  function wildTurn() {
+    if (state !== "fight") { busy = false; return; }
+    var attack = wild.attacks[Math.floor(Math.random() * wild.attacks.length)];
+    var ko = doAttack(wild, player, attack);
+    if (ko) { endBattle(false); return; }
+    busy = false;
+  }
+
+  function endBattle(won) {
+    state = "over";
+    busy = true;
+    if (won) {
+      wins++; saveRecord();
+      document.getElementById("wins").textContent = wins;
+      msgEl.textContent = "¡Ganaste! " + player.name + " venció a la criatura salvaje.";
+      msgEl.className = "message show win";
+      log("<p><strong>¡Victoria!</strong> La criatura salvaje se fue.</p>");
+    } else {
+      losses++; saveRecord();
+      document.getElementById("losses").textContent = losses;
+      msgEl.textContent = "Derrota: " + player.name + " se quedó sin PS. ¡Inténtalo de nuevo!";
+      msgEl.className = "message show lose";
+      log("<p><strong>Derrota…</strong> Tu criatura ya no puede pelear.</p>");
+    }
+  }
+
+  document.getElementById("again").addEventListener("click", function () {
+    if (player) startBattle(player.id);
+  });
+  document.getElementById("restart").addEventListener("click", function () {
+    state = "select";
+    battleScreen.classList.add("hidden");
+    selectScreen.classList.remove("hidden");
+    msgEl.className = "message"; msgEl.textContent = "";
+  });
+
+  /* ---------- Dibujo ---------- */
+  function drawField() {
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#7dd3fc"); g.addColorStop(0.55, "#bae6fd"); g.addColorStop(0.56, "#86efac"); g.addColorStop(1, "#4ade80");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#fef9c3";
+    ctx.beginPath(); ctx.arc(520, 45, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.75)";
+    ctx.fillRect(80, 40, 90, 14); ctx.fillRect(100, 52, 60, 10);
+    ctx.fillStyle = "#15803d";
+    ctx.beginPath(); ctx.ellipse(150, 250, 90, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(450, 250, 90, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#166534";
+    ctx.font = "bold 15px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("Tú", 150, 275);
+    ctx.fillText("Salvaje", 450, 275);
+  }
+
+  function drawSpriteFighter(f, x, y, now, lunge, flashing) {
+    var bob = Math.sin(now / 300) * 3;
+    var frame = Math.floor(now / 500) % 2;
+    var dx = lunge ? Math.sin(lunge * Math.PI) * 34 * (f === player ? 1 : -1) : 0;
+    ctx.save();
+    if (flashing) ctx.globalAlpha = 0.35 + 0.35 * Math.sin(now / 60);
+    S.drawCreature(ctx, f.id, "walk", frame, x + dx - SIZE / 2, y + bob - SIZE / 2, SCALE, f === wild);
+    ctx.restore();
+  }
+
+  function loop() {
+    var now = Date.now();
+    if (state === "select") {
+      drawPickSprites(now);
+    } else {
+      drawField();
+      var lungeP = 0, lungeW = 0, flashP = false, flashW = false;
+      if (anim) {
+        var p = (now - anim.t0) / 350;
+        if (p >= 1) anim = null;
+        else if (anim.who === "player") lungeP = p;
+        else lungeW = p;
+      }
+      if (flash) {
+        var fp = (now - flash.t0) / 300;
+        if (fp >= 1) flash = null;
+        else if (fp > 0) {
+          if (flash.who === "player") flashP = true; else flashW = true;
+        }
+      }
+      // Entrenador detrás de tu criatura
+      var tStep = Math.floor(now / 600) % 2;
+      S.drawTrainer(ctx, "chico", tStep, 52, 150, 5, false);
+      drawSpriteFighter(player, 150, 200, now, lungeP, flashP);
+      drawSpriteFighter(wild, 450, 200, now, lungeW, flashW);
+    }
+    raf = requestAnimationFrame(loop);
+  }
+
+  raf = requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chispa Juegos — Juegos gratis en línea</title>
-<meta name="description" content="Chispa Juegos: juega gratis en línea a la serpiente, 2048, memoria, flappy tortuga, buscaminas, tetris y más. Sin descargas ni registro.">
+<meta name="description" content="Chispa Juegos: juega gratis en línea a la serpiente, 2048, memoria, flappy burbu, batalla de criaturas, buscaminas, tetris y más. Sin descargas ni registro.">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -35,11 +35,11 @@
   <section>
     <h2>Juego destacado</h2>
     <div class="featured">
-      <canvas id="featured-canvas" width="520" height="300" aria-label="Tortuga volando entre tuberías"></canvas>
+      <canvas id="featured-canvas" width="520" height="300" aria-label="Burbu volando entre tuberías"></canvas>
       <div class="featured-body">
         <span class="tag">Destacado de la semana</span>
-        <h3>Flappy Tortuga</h3>
-        <p>Guía a una tortuga valiente entre las tuberías. Un clic, un toque o la barra espaciadora bastan para volar. ¿Cuántos puntos logras sin chocar?</p>
+        <h3>Flappy Burbu</h3>
+        <p>Guía a Burbu, la criatura de agua, entre las tuberías. Un clic, un toque o la barra espaciadora bastan para volar. ¿Cuántos puntos logras sin chocar?</p>
         <a class="play-btn" href="juegos/flappy.html">Jugar ahora</a>
       </div>
     </div>
@@ -77,19 +77,28 @@
         </div>
       </a>
 
-      <a class="card" href="juegos/flappy.html" data-cat="accion" data-name="flappy tortuga acción volar">
+      <a class="card" href="juegos/flappy.html" data-cat="accion" data-name="flappy burbu acción volar">
         <canvas class="thumb" data-game="flappy" width="320" height="200"></canvas>
         <div class="card-body">
-          <h3>Flappy Tortuga</h3>
+          <h3>Flappy Burbu</h3>
           <span class="card-cat">Acción</span>
           <div class="card-meta"><span class="stars">★★★★★ <small>4.9</small></span><span class="card-play">Jugar</span></div>
         </div>
       </a>
 
-      <a class="card" href="juegos/corredor.html" data-cat="accion" data-name="corredor endless runner saltar acción">
+      <a class="card" href="juegos/batalla.html" data-cat="accion" data-name="batalla criaturas rpg acción broti brasa burbu">
+        <canvas class="thumb" data-game="batalla" width="320" height="200"></canvas>
+        <div class="card-body">
+          <h3>Batalla de criaturas</h3>
+          <span class="card-cat">Acción</span>
+          <div class="card-meta"><span class="stars">★★★★★ <small>5.0</small></span><span class="card-play">Jugar</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="juegos/corredor.html" data-cat="accion" data-name="corre brasa acción saltar">
         <canvas class="thumb" data-game="corredor" width="320" height="200"></canvas>
         <div class="card-body">
-          <h3>Corredor Infinito</h3>
+          <h3>Corre Brasa</h3>
           <span class="card-cat">Acción</span>
           <div class="card-meta"><span class="stars">★★★★☆ <small>4.6</small></span><span class="card-play">Jugar</span></div>
         </div>
@@ -162,17 +171,20 @@
     <ul>
       <li><strong>Clásicos de siempre:</strong> Serpiente, Tres en Raya y Pong.</li>
       <li><strong>Retos de ingenio:</strong> 2048, Memoria, Buscaminas y Simon Dice.</li>
-      <li><strong>Acción y arcade:</strong> Flappy Tortuga, Corredor Infinito, Rompebloques y Bloques.</li>
+      <li><strong>Acción y arcade:</strong> Flappy Burbu, Batalla de criaturas, Corre Brasa, Rompebloques y Bloques.</li>
       <li><strong>Para jugar acompañado:</strong> Pong para dos jugadores en el mismo teclado.</li>
     </ul>
     <p>Elige un juego, pulsa «Jugar» y a divertirse. Tu puntuación se guarda en tu propio navegador.</p>
+    <p>Todos los juegos usan los sprites originales de <strong>Broti</strong>, <strong>Brasa</strong> y <strong>Burbu</strong> y los dos entrenadores, dibujados como mapas de píxeles en el propio código, sin imágenes de terceros.</p>
     <p class="footer-note">Chispa Juegos — juegos libres creados desde cero. Sin marcas de terceros ni contenido con derechos de autor.</p>
   </div>
 </footer>
 
+<script src="juegos/sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
 
   /* ---------- Miniaturas dibujadas en canvas ---------- */
   function rect(ctx, x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
@@ -183,10 +195,11 @@
       rect(ctx, 0, 0, w, h, "#14532d");
       ctx.fillStyle = "#166534";
       for (var i = 0; i < w; i += 40) for (var j = 0; j < h; j += 40) if ((i + j) % 80 === 0) ctx.fillRect(i, j, 40, 40);
-      var snake = [[60, 100], [100, 100], [140, 100], [140, 140], [180, 140]];
-      snake.forEach(function (p, k) { rect(ctx, p[0], p[1], 36, 36, k === snake.length - 1 ? "#4ade80" : "#22c55e"); });
-      circle(ctx, 198, 158, 8, "#fff"); circle(ctx, 198, 158, 4, "#111827");
-      circle(ctx, 260, 60, 14, "#ef4444"); rect(ctx, 258, 42, 4, 10, "#166534");
+      var snake = [[60, 100], [100, 100], [140, 100], [140, 140]];
+      snake.forEach(function (p) { rect(ctx, p[0], p[1], 36, 36, "#22c55e"); });
+      circle(ctx, 260, 60, 14, "#e11d48"); rect(ctx, 258, 42, 4, 10, "#166534");
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "broti", "idle", 0, 176, 132, 2, false);
     },
     "2048": function (ctx, w, h) {
       rect(ctx, 0, 0, w, h, "#bbada0");
@@ -197,13 +210,19 @@
         ctx.fillStyle = t[2]; ctx.font = "bold 26px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(t[0], x + 31, y + 33);
       });
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "broti", "idle", 0, 32, 32, 2, false);
     },
     memoria: function (ctx, w, h) {
       rect(ctx, 0, 0, w, h, "#312e81");
       var syms = ["★", "♥", "♦", "♣"];
       for (var i = 0; i < 8; i++) {
         var x = 24 + (i % 4) * 72, y = 26 + Math.floor(i / 4) * 76;
-        if (i === 1 || i === 5) {
+        if (i === 1) {
+          rect(ctx, x, y, 62, 66, "#fef3c7");
+          ctx.imageSmoothingEnabled = false;
+          S.drawCreature(ctx, "broti", "idle", 0, x + 15, y + 8, 2, false);
+        } else if (i === 5) {
           rect(ctx, x, y, 62, 66, "#fef3c7");
           ctx.fillStyle = "#db2777"; ctx.font = "bold 34px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
           ctx.fillText("★", x + 31, y + 35);
@@ -220,27 +239,49 @@
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
       rect(ctx, 210, 0, 46, 90, "#22c55e"); rect(ctx, 204, 80, 58, 14, "#16a34a");
       rect(ctx, 210, 140, 46, 60, "#22c55e"); rect(ctx, 204, 140, 58, 14, "#16a34a");
-      circle(ctx, 110, 105, 34, "#16a34a"); circle(ctx, 142, 92, 16, "#22c55e");
-      circle(ctx, 146, 88, 4, "#fff"); circle(ctx, 147, 88, 2, "#111827");
-      ctx.fillStyle = "#dcfce7"; ctx.beginPath(); ctx.arc(110, 105, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "burbu", "idle", 0, 88, 72, 4, false);
       rect(ctx, 0, h - 18, w, 18, "#a16207");
+    },
+    batalla: function (ctx, w, h) {
+      var g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, "#7dd3fc"); g.addColorStop(0.6, "#bae6fd"); g.addColorStop(0.61, "#86efac"); g.addColorStop(1, "#4ade80");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = "#fef9c3";
+      ctx.beginPath(); ctx.arc(280, 32, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "broti", "attack", 0, 60, 84, 4, false);
+      S.drawCreature(ctx, "brasa", "idle", 0, 200, 84, 4, true);
+      ctx.fillStyle = "#facc15";
+      ctx.font = "bold 30px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("VS", w / 2, 60);
+      ctx.fillStyle = "#166534";
+      ctx.font = "bold 13px sans-serif";
+      ctx.fillText("Broti", 92, 168); ctx.fillText("Brasa", 232, 168);
     },
     corredor: function (ctx, w, h) {
       var g = ctx.createLinearGradient(0, 0, 0, h);
       g.addColorStop(0, "#fde68a"); g.addColorStop(1, "#f59e0b");
       ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
       rect(ctx, 0, 150, w, 50, "#78350f");
-      rect(ctx, 60, 108, 34, 42, "#dc2626"); circle(ctx, 77, 96, 16, "#fca5a5");
-      circle(ctx, 82, 92, 3, "#111827");
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "brasa", "walk", 0, 60, 96, 3, false);
       rect(ctx, 200, 118, 26, 32, "#44403c"); rect(ctx, 200, 108, 26, 12, "#44403c");
       rect(ctx, 260, 128, 20, 22, "#44403c");
     },
     rompebloques: function (ctx, w, h) {
       rect(ctx, 0, 0, w, h, "#0f172a");
-      var colors = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
+      var colors = ["#58b368", "#f97316", "#38bdf8", "#2f9e44", "#fb923c"];
       for (var r = 0; r < 4; r++) for (var c = 0; c < 6; c++) rect(ctx, 18 + c * 48, 18 + r * 24, 42, 18, colors[r]);
       rect(ctx, 120, 172, 80, 12, "#38bdf8");
-      circle(ctx, 160, 158, 8, "#fff");
+      ctx.save();
+      ctx.beginPath(); ctx.arc(160, 158, 9, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = "#ef4444"; ctx.fillRect(151, 149, 18, 9);
+      ctx.fillStyle = "#f8fafc"; ctx.fillRect(151, 158, 18, 9);
+      ctx.restore();
+      ctx.strokeStyle = "#111827"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(160, 158, 9, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#f8fafc"; ctx.beginPath(); ctx.arc(160, 158, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     },
     buscaminas: function (ctx, w, h) {
       rect(ctx, 0, 0, w, h, "#9ca3af");
@@ -250,23 +291,28 @@
       }
       ctx.fillStyle = "#ef4444"; ctx.font = "bold 20px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText("1", 40, 33); ctx.fillText("2", 80, 33);
-      circle(ctx, 200, 118, 12, "#111827");
-      ctx.strokeStyle = "#111827"; ctx.lineWidth = 2;
-      for (var k = 0; k < 8; k++) { var a = k * Math.PI / 4; ctx.beginPath(); ctx.moveTo(200 + Math.cos(a) * 12, 118 + Math.sin(a) * 12); ctx.lineTo(200 + Math.cos(a) * 18, 118 + Math.sin(a) * 18); ctx.stroke(); }
-      rect(ctx, 238, 66, 4, 22, "#92400e"); ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.moveTo(242, 66); ctx.lineTo(262, 72); ctx.lineTo(242, 80); ctx.closePath(); ctx.fill();
+      /* Trampa: una X negra */
+      ctx.strokeStyle = "#111827"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(190, 108); ctx.lineTo(210, 128); ctx.moveTo(210, 108); ctx.lineTo(190, 128); ctx.stroke();
+      /* Marca: Broti, la criatura hoja */
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "broti", "idle", 0, 228, 56, 2, false);
     },
     "tres-en-raya": function (ctx, w, h) {
       rect(ctx, 0, 0, w, h, "#fef3c7");
       ctx.strokeStyle = "#111827"; ctx.lineWidth = 5;
       ctx.beginPath(); ctx.moveTo(120, 20); ctx.lineTo(120, 180); ctx.moveTo(200, 20); ctx.lineTo(200, 180);
       ctx.moveTo(20, 73); ctx.lineTo(300, 73); ctx.moveTo(20, 126); ctx.lineTo(300, 126); ctx.stroke();
-      ctx.font = "bold 44px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillStyle = "#dc2626"; ctx.fillText("X", 70, 46); ctx.fillText("X", 250, 100);
-      ctx.fillStyle = "#2563eb"; ctx.fillText("O", 160, 100); ctx.fillText("O", 70, 153);
+      /* Broti contra Brasa, con sus sprites */
+      ctx.imageSmoothingEnabled = false;
+      S.drawCreature(ctx, "broti", "idle", 0, 54, 24, 2, false);
+      S.drawCreature(ctx, "broti", "idle", 0, 234, 81, 2, false);
+      S.drawCreature(ctx, "brasa", "idle", 0, 144, 81, 2, false);
+      S.drawCreature(ctx, "brasa", "idle", 0, 54, 134, 2, false);
     },
     bloques: function (ctx, w, h) {
       rect(ctx, 0, 0, w, h, "#1e1b4b");
-      var colors = ["#06b6d4", "#facc15", "#a855f7", "#22c55e", "#ef4444"];
+      var colors = ["#38bdf8", "#facc15", "#58b368", "#2f9e44", "#ef4444"];
       for (var r = 0; r < 4; r++) for (var c = 0; c < 8; c++) if ((r * 8 + c) % 3 !== 0) rect(ctx, 60 + c * 26, 96 + r * 24, 24, 22, colors[(r + c) % 5]);
       rect(ctx, 112, 24, 26, 24, "#facc15"); rect(ctx, 138, 24, 26, 24, "#facc15");
       rect(ctx, 112, 48, 26, 24, "#facc15"); rect(ctx, 138, 48, 26, 24, "#facc15");
@@ -275,7 +321,7 @@
     },
     simon: function (ctx, w, h) {
       rect(ctx, 0, 0, w, h, "#111827");
-      var cols = ["#22c55e", "#ef4444", "#eab308", "#3b82f6"];
+      var cols = ["#58b368", "#f97316", "#38bdf8", "#dc2626"];
       cols.forEach(function (c, i) {
         var x = 60 + (i % 2) * 104, y = 20 + Math.floor(i / 2) * 84;
         ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + 46, y + 36, 42, 0, Math.PI * 2); ctx.fill();
@@ -286,8 +332,19 @@
       rect(ctx, 0, 0, w, h, "#0f172a");
       ctx.strokeStyle = "#fff"; ctx.setLineDash([8, 8]); ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke(); ctx.setLineDash([]);
-      rect(ctx, 20, 70, 12, 60, "#fff"); rect(ctx, w - 32, 60, 12, 60, "#fff");
-      circle(ctx, w / 2, 100, 9, "#facc15");
+      ctx.imageSmoothingEnabled = false;
+      rect(ctx, 20, 70, 12, 60, "#2563eb"); rect(ctx, w - 32, 60, 12, 60, "#dc2626");
+      S.drawTrainer(ctx, "chico", 0, 2, 78, 2, false);
+      S.drawTrainer(ctx, "chica", 0, w - 46, 68, 2, false);
+      /* Pokébola */
+      ctx.save();
+      ctx.beginPath(); ctx.arc(w / 2, 100, 9, 0, Math.PI * 2); ctx.clip();
+      ctx.fillStyle = "#ef4444"; ctx.fillRect(w / 2 - 9, 91, 18, 9);
+      ctx.fillStyle = "#f8fafc"; ctx.fillRect(w / 2 - 9, 100, 18, 9);
+      ctx.restore();
+      ctx.strokeStyle = "#111827"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(w / 2, 100, 9, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#f8fafc"; ctx.beginPath(); ctx.arc(w / 2, 100, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = "#fff"; ctx.font = "bold 34px sans-serif"; ctx.textAlign = "center";
       ctx.fillText("3", w / 2 - 60, 50); ctx.fillText("2", w / 2 + 60, 50);
     }
@@ -300,7 +357,7 @@
   }
   document.querySelectorAll("canvas.thumb").forEach(drawThumb);
 
-  /* Miniatura grande del destacado: tortuga entre tuberías */
+  /* Miniatura grande del destacado: Burbu entre tuberías */
   (function () {
     var cv = document.getElementById("featured-canvas");
     var ctx = cv.getContext("2d"), w = cv.width, h = cv.height;
@@ -310,11 +367,8 @@
     circle(ctx, 430, 50, 30, "#fef9c3"); circle(ctx, 420, 44, 24, "#fefce8");
     rect(ctx, 330, 0, 56, 120, "#22c55e"); rect(ctx, 322, 108, 72, 16, "#16a34a");
     rect(ctx, 330, 190, 56, 110, "#22c55e"); rect(ctx, 322, 190, 72, 16, "#16a34a");
-    circle(ctx, 180, 140, 52, "#16a34a"); circle(ctx, 226, 122, 24, "#22c55e");
-    circle(ctx, 232, 116, 6, "#fff"); circle(ctx, 234, 116, 3, "#111827");
-    ctx.fillStyle = "#dcfce7"; ctx.beginPath(); ctx.arc(180, 140, 34, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#166534"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(180, 140, 22, 0, Math.PI * 2); ctx.stroke();
+    ctx.imageSmoothingEnabled = false;
+    S.drawCreature(ctx, "burbu", "idle", 0, 148, 108, 6, false);
     rect(ctx, 0, h - 24, w, 24, "#a16207");
   })();
 

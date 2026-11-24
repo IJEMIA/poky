@@ -7,7 +7,9 @@
 <link rel="stylesheet" href="juegos.css">
 <style>
   #board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: #bbada0; padding: 8px; border-radius: 12px; max-width: 420px; margin: 0 auto; }
-  .tile { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.5rem; border-radius: 8px; background: #cdc1b4; color: #776e65; }
+  .tile { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: 1.5rem; border-radius: 8px; background: #cdc1b4; color: #776e65; }
+  .tile canvas { width: 48px; height: 48px; image-rendering: pixelated; }
+  .tile .num { font-size: 1.05rem; line-height: 1; }
   .tile.v2 { background: #eee4da; } .tile.v4 { background: #ede0c8; }
   .tile.v8 { background: #f2b179; color: #fff; } .tile.v16 { background: #f59563; color: #fff; }
   .tile.v32 { background: #f67c5f; color: #fff; } .tile.v64 { background: #f65e3b; color: #fff; }
@@ -32,12 +34,16 @@
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Desliza las fichas con las flechas del teclado o deslizando el dedo. Cuando dos fichas iguales chocan, se fusionan en una sola con el doble de valor. Suma puntos con cada fusión y llega a la ficha <strong>2048</strong> para ganar. El juego termina cuando ya no hay movimientos posibles.</p>
+    <p>Desliza las fichas con las flechas del teclado o deslizando el dedo. Cuando dos fichas iguales chocan, se fusionan en una sola con el doble de valor. Cada ficha muestra la cara de una criatura: Broti en las fichas bajas, Brasa y Burbu al subir de valor, y los entrenadores en los valores más altos. Suma puntos con cada fusión y llega a la ficha <strong>2048</strong> para ganar. El juego termina cuando ya no hay movimientos posibles.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
+  /* Cara que muestra cada ficha según su valor */
+  var FACES = { 2: "broti", 4: "broti", 8: "brasa", 16: "brasa", 32: "burbu", 64: "burbu", 128: "chico", 256: "chico", 512: "chica", 1024: "chica", 2048: "chica" };
   var boardEl = document.getElementById("board");
   var scoreEl = document.getElementById("score");
   var bestEl = document.getElementById("best");
@@ -66,7 +72,20 @@
       var d = document.createElement("div");
       var v = grid[r][c];
       d.className = "tile" + (v ? " v" + v : "");
-      d.textContent = v || "";
+      if (v) {
+        var cv = document.createElement("canvas");
+        cv.width = 64; cv.height = 64;
+        var c2 = cv.getContext("2d");
+        c2.imageSmoothingEnabled = false;
+        var face = FACES[v];
+        if (face === "chico" || face === "chica") S.drawTrainer(c2, face, 0, 0, 0, 4, false);
+        else S.drawCreature(c2, face, "idle", 0, 0, 0, 4, false);
+        d.appendChild(cv);
+        var n = document.createElement("span");
+        n.className = "num";
+        n.textContent = v;
+        d.appendChild(n);
+      }
       boardEl.appendChild(d);
     }
     scoreEl.textContent = score;

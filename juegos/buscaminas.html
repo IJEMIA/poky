@@ -7,7 +7,8 @@
 <link rel="stylesheet" href="juegos.css">
 <style>
   #board { display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; max-width: 420px; margin: 0 auto; background: #9ca3af; padding: 4px; border-radius: 8px; }
-  .cell { aspect-ratio: 1; background: #d1d5db; border: none; font-weight: 800; font-size: 1rem; cursor: pointer; padding: 0; color: #111827; border-radius: 2px; }
+  .cell { aspect-ratio: 1; background: #d1d5db; border: none; font-weight: 800; font-size: 1rem; cursor: pointer; padding: 0; color: #111827; border-radius: 2px; display: flex; align-items: center; justify-content: center; }
+  .cell canvas { width: 82%; height: 82%; image-rendering: pixelated; }
   .cell:hover { background: #e5e7eb; }
   .cell.open { background: #f3f4f6; cursor: default; }
   .cell.flag { color: #dc2626; }
@@ -25,26 +26,28 @@
   <div class="topbar"><a class="back" href="../index.html">← Volver</a><h1>Buscaminas</h1></div>
   <div class="panel">
     <div class="scorebar">
-      <div class="score">Minas: <span id="mines">10</span></div>
+      <div class="score">Trampas: <span id="mines">10</span></div>
       <div class="best">Tiempo: <span id="time">0</span> s</div>
       <button class="btn" id="restart">Reiniciar</button>
     </div>
     <div id="board"></div>
     <div class="mode-row">
       <button class="mode-btn active" id="mode-reveal">Revelar</button>
-      <button class="mode-btn" id="mode-flag">Poner bandera</button>
+      <button class="mode-btn" id="mode-flag">Marcar con Broti</button>
     </div>
-    <p class="hint">Clic para revelar · Clic derecho para poner bandera · En el celular usa el modo «Poner bandera»</p>
+    <p class="hint">Clic para revelar · Clic derecho para marcar con Broti · En el celular usa el modo «Marcar con Broti»</p>
     <div class="message" id="message"></div>
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Hay 10 minas escondidas en un tablero de 9×9. Revela casillas sin tocar ninguna mina: los números indican cuántas minas hay alrededor de esa casilla. Marca con banderas las casillas que creas que tienen mina. Ganas cuando revelas todas las casillas seguras. El primer clic nunca es una mina.</p>
+    <p>Hay 10 trampas escondidas en un tablero de 9×9. Revela casillas sin tocar ninguna trampa: los números indican cuántas trampas hay alrededor de esa casilla. Marca con Broti, la criatura hoja, las casillas que creas que tienen trampa. Ganas cuando revelas todas las casillas seguras. El primer clic nunca es una trampa.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
   var SIZE = 9, MINES = 10;
   var boardEl = document.getElementById("board");
   var minesEl = document.getElementById("mines");
@@ -129,7 +132,7 @@
     el.classList.add("open");
     if (cell.mine) {
       el.classList.add("mine");
-      el.textContent = "●";
+      el.textContent = "✖";
       return gameOver(false);
     }
     if (cell.count > 0) { el.textContent = cell.count; el.classList.add("n" + cell.count); }
@@ -144,7 +147,16 @@
     cell.flag = !cell.flag;
     flags += cell.flag ? 1 : -1;
     var el = cellEl(r, c);
-    el.textContent = cell.flag ? "⚑" : "";
+    /* La marca es Broti, la criatura hoja, dibujado con su sprite */
+    el.textContent = "";
+    if (cell.flag) {
+      var cv = document.createElement("canvas");
+      cv.width = 32; cv.height = 32;
+      var c2 = cv.getContext("2d");
+      c2.imageSmoothingEnabled = false;
+      S.drawCreature(c2, "broti", "idle", 0, 0, 0, 2, false);
+      el.appendChild(cv);
+    }
     el.classList.toggle("flag", cell.flag);
     minesEl.textContent = MINES - flags;
   }
@@ -155,7 +167,7 @@
     for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
       if (grid[r][c].mine) {
         var el = cellEl(r, c);
-        el.textContent = "●";
+        el.textContent = "✖";
         el.classList.add("mine");
       }
     }
@@ -163,7 +175,7 @@
       msgEl.textContent = "¡Ganaste! Despejaste el campo en " + seconds + " segundos.";
       msgEl.className = "message show win";
     } else {
-      msgEl.textContent = "¡Boom! Tocaste una mina. Pulsa Reiniciar para intentarlo de nuevo.";
+      msgEl.textContent = "¡Boom! Tocaste una trampa. Pulsa Reiniciar para intentarlo de nuevo.";
       msgEl.className = "message show lose";
     }
   }

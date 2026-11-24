@@ -21,12 +21,16 @@
   </div>
   <div class="instructions">
     <h2>Cómo jugar</h2>
-    <p>Mueve la paleta para que la pelota no caiga al suelo y rompa todos los bloques. Cada bloque vale 10 puntos; al limpiarlos todos subes de nivel y la pelota va más rápido. Tienes 3 vidas. En el celular, arrastra el dedo sobre la pantalla.</p>
+    <p>Mueve la paleta para que la pokébola no caiga al suelo y rompa todos los bloques. Los bloques llevan los colores de Broti, Brasa y Burbu. Cada bloque vale 10 puntos; al limpiarlos todos subes de nivel y la pelota va más rápido. Tienes 3 vidas. En el celular, arrastra el dedo sobre la pantalla.</p>
   </div>
 </div>
+<script src="sprites.js"></script>
 <script>
 (function () {
   "use strict";
+  var S = window.SPRITES;
+  /* Los bloques usan los colores de las tres criaturas */
+  var ROW_COLORS = [S.CREATURES.broti.color, S.CREATURES.brasa.color, S.CREATURES.burbu.color, "#2f9e44", "#fb923c"];
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
   var scoreEl = document.getElementById("score");
@@ -35,7 +39,6 @@
   var msgEl = document.getElementById("message");
   var W = 480, H = 520;
   var paddle, ball, bricks, score, lives, level, state, raf = null;
-  var ROW_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4"];
   var keys = {};
 
   function buildBricks() {
@@ -117,6 +120,21 @@
     }
   }
 
+  /* Pelota pokébola genérica: mitad roja, mitad blanca, sin marca */
+  function drawPokeball(x, y, r) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = "#ef4444"; ctx.fillRect(x - r, y - r, r * 2, r);
+    ctx.fillStyle = "#f8fafc"; ctx.fillRect(x - r, y, r * 2, r);
+    ctx.restore();
+    ctx.strokeStyle = "#111827"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.stroke();
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, Math.PI * 2); ctx.fill();
+    ctx.stroke();
+  }
+
   function draw() {
     ctx.fillStyle = "#0f172a"; ctx.fillRect(0, 0, W, H);
     bricks.forEach(function (b) {
@@ -128,8 +146,7 @@
     });
     ctx.fillStyle = "#38bdf8";
     ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+    drawPokeball(ball.x, ball.y, ball.r);
     if (state === "ready" && lives === 3 && level === 1 && score === 0) {
       ctx.fillStyle = "rgba(15,23,42,.7)";
       ctx.fillRect(0, 0, W, H);
